@@ -5,11 +5,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
-
-from conftest import wrap_attrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -115,7 +114,7 @@ def test_validate_valid() -> None:
 
 def test_validate_missing_dimensions() -> None:
     with pytest.raises(ValueError, match="spatial:dimensions"):
-        spatial.validate({})  # type: ignore[typeddict-item]
+        spatial.validate({})
 
 
 def test_validate_bad_dimensions_length() -> None:
@@ -130,7 +129,9 @@ def test_validate_bad_bbox_length() -> None:
 
 def test_validate_bad_registration() -> None:
     with pytest.raises(ValueError, match="spatial:registration"):
-        spatial.validate({"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"})
+        spatial.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"}
+        )
 
 
 def test_create_minimal() -> None:
@@ -156,7 +157,7 @@ def test_extract_missing_convention() -> None:
     attrs = {"foo": "bar"}
     remaining, data = spatial.extract(attrs)
     assert remaining == {"foo": "bar"}
-    assert data == {}
+    assert data == {}  # type: ignore[comparison-overlap]
 
 
 def test_insert_collision_raises() -> None:

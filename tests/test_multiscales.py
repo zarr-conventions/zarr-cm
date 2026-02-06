@@ -5,11 +5,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import multiscales
 from zarr_cm.multiscales import CMO, MultiscalesAttrs
-
-from conftest import wrap_attrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "multiscales.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -138,12 +137,14 @@ def test_validate_empty_layout() -> None:
 
 def test_validate_derived_without_transform() -> None:
     with pytest.raises(ValueError, match="missing 'transform'"):
-        multiscales.validate({
-            "layout": [
-                {"asset": "0"},
-                {"asset": "1", "derived_from": "0"},
-            ],
-        })
+        multiscales.validate(
+            {
+                "layout": [
+                    {"asset": "0"},
+                    {"asset": "1", "derived_from": "0"},
+                ],
+            }
+        )
 
 
 def test_create_minimal() -> None:

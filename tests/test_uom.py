@@ -5,11 +5,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import uom
 from zarr_cm.uom import CMO, UomAttrs
-
-from conftest import wrap_attrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "uom.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())

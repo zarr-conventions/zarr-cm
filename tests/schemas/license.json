@@ -28,10 +28,7 @@
           "$ref": "#/$defs/license"
         }
       },
-      "required": [
-        "zarr_conventions",
-        "license"
-      ]
+      "required": ["zarr_conventions", "license"]
     }
   },
   "required": ["zarr_format", "node_type", "attributes"],
@@ -106,29 +103,19 @@
       },
       "anyOf": [
         {
-          "required": [
-            "spdx"
-          ]
+          "required": ["spdx"]
         },
         {
-          "required": [
-            "url"
-          ]
+          "required": ["url"]
         },
         {
-          "required": [
-            "text"
-          ]
+          "required": ["text"]
         },
         {
-          "required": [
-            "file"
-          ]
+          "required": ["file"]
         },
         {
-          "required": [
-            "path"
-          ]
+          "required": ["path"]
         }
       ]
     }

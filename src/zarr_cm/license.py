@@ -30,7 +30,9 @@ class LicenseConventionAttrs(TypedDict):
 
 UUID: Final = "b77365e5-2b0c-4141-b917-c03b7c68e935"
 SCHEMA_URL: Final = "https://raw.githubusercontent.com/clbarnes/zarr-convention-license/refs/tags/v1/schema.json"
-SPEC_URL: Final = "https://github.com/clbarnes/zarr-convention-license/blob/v1/README.md"
+SPEC_URL: Final = (
+    "https://github.com/clbarnes/zarr-convention-license/blob/v1/README.md"
+)
 
 CMO: Final[ConventionMetadataObject] = {
     "uuid": UUID,

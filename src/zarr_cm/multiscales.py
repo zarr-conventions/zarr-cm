@@ -73,7 +73,9 @@ def insert(
     attrs: dict[str, Any], data: MultiscalesAttrs, *, overwrite: bool = False
 ) -> dict[str, Any]:
     """Insert multiscales convention metadata into an attributes dict."""
-    return insert_convention(attrs, CMO, {"multiscales": dict(data)}, overwrite=overwrite)
+    return insert_convention(
+        attrs, CMO, {"multiscales": dict(data)}, overwrite=overwrite
+    )
 
 
 def extract(
