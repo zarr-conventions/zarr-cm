@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 2025.11.21-26-gab443cc
+_src_path: gh:scientific-python/cookie
+backend: hatch
+docs: mkdocs
+email: davis.v.bennett@gmail.com
+full_name: Davis Bennett
+license: BSD
+org: zarr-conventions
+project_name: zarr-cm
+project_short_description: Python implementation of Zarr Conventions Metadata
+url: https://github.com/zarr-conventions/zarr-cm
+vcs: true
