@@ -1,5 +1,21 @@
 # API Reference
 
+## Multi-convention
+
+<!-- prettier-ignore -->
+::: zarr_cm
+    options:
+      members:
+        - CONVENTION_NAMES
+        - ALL_CONVENTION_KEYS
+        - MultiConventionAttrs
+        - create_many
+        - validate_many
+        - validate_all
+        - insert_many
+        - extract_many
+        - extract_all
+
 ## Core
 
 <!-- prettier-ignore -->

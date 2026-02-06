@@ -73,3 +73,37 @@ print(extracted)
 ```
 
 <!-- blacken-docs:on -->
+
+## Multiple conventions
+
+`create_many`, `insert_many`, `extract_many`, and `validate_many` work with
+several conventions at once, keyed by convention name. `extract_all` and
+`validate_all` are shortcuts that operate on all known conventions.
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import create_many, extract_all
+
+# Create attributes with multiple conventions at once
+attrs = create_many(
+    {
+        "geo-proj": {"proj:code": "EPSG:4326"},
+        "spatial": {"spatial:dimensions": ["y", "x"]},
+        "license": {"spdx": "MIT"},
+    }
+)
+print(sorted(attrs.keys()))
+#> ['license', 'proj:code', 'spatial:dimensions', 'zarr_conventions']
+
+# Extract all known conventions
+remaining, extracted = extract_all(attrs)
+print(remaining)
+#> {}
+print(sorted(extracted.keys()))
+#> ['geo-proj', 'license', 'spatial']
+print(extracted["geo-proj"])
+#> {'proj:code': 'EPSG:4326'}
+```
+
+<!-- blacken-docs:on -->
