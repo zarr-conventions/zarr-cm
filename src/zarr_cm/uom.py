@@ -1,3 +1,5 @@
+"""uom convention: https://github.com/clbarnes/zarr-convention-uom"""
+
 from __future__ import annotations
 
 from typing import Any, Final, NotRequired, TypedDict

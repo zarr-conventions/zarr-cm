@@ -1,3 +1,5 @@
+"""license convention: https://github.com/clbarnes/zarr-convention-license"""
+
 from __future__ import annotations
 
 from typing import Any, Final, NotRequired, TypedDict

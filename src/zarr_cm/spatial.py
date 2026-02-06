@@ -1,3 +1,5 @@
+"""spatial convention: https://github.com/zarr-conventions/spatial"""
+
 from __future__ import annotations
 
 from typing import Any, Final, NotRequired, TypedDict
