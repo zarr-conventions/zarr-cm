@@ -46,6 +46,7 @@ Python types and utilities for
 Each module provides:
 
 - **TypedDict types** for convention-specific metadata
+- **`create`** — create convention metadata
 - **`insert`** — add convention metadata to a Zarr attributes dict
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
