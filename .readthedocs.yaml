@@ -9,5 +9,5 @@ build:
     python: "3.11"
   commands:
     - pip install uv
-    - uv sync --frozen --group docs
+    - uv sync --group docs
     - uv run mkdocs build --clean --site-dir $READTHEDOCS_OUTPUT/html
