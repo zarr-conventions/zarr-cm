@@ -2,7 +2,7 @@ site_name: zarr-cm
 site_url: https://zarr-cm.readthedocs.io/
 site_author: "Davis Bennett"
 
-repo_name: "zarr-conventions/zarr_cm"
+repo_name: "zarr-conventions/zarr-cm"
 repo_url: "https://github.com/zarr-conventions/zarr-cm"
 
 theme:
@@ -29,6 +29,10 @@ theme:
         icon: material/weather-night
         name: Switch to dark mode
 
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+
 plugins:
   autorefs: {}
   mkdocstrings:
@@ -37,7 +41,6 @@ plugins:
         paths: [.]
         inventories:
           - https://docs.python.org/3/objects.inv
-          - https://docs.pydantic.dev/latest/objects.inv
         options:
           members_order: source
           separate_signature: true

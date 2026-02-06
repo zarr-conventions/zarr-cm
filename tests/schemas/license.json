@@ -1,0 +1,136 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "License Convention",
+  "description": "Schema for License Zarr convention",
+  "type": "object",
+  "properties": {
+    "zarr_format": {
+      "type": "integer",
+      "description": "Zarr format version"
+    },
+    "node_type": {
+      "type": "string",
+      "enum": ["array", "group"],
+      "description": "Type of Zarr node"
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Zarr attributes containing convention metadata and properties",
+      "properties": {
+        "zarr_conventions": {
+          "type": "array",
+          "description": "Array of convention metadata objects",
+          "contains": {
+            "$ref": "#/$defs/conventionMetadata"
+          }
+        },
+        "license": {
+          "$ref": "#/$defs/license"
+        }
+      },
+      "required": [
+        "zarr_conventions",
+        "license"
+      ]
+    }
+  },
+  "required": ["zarr_format", "node_type", "attributes"],
+  "additionalProperties": true,
+  "$defs": {
+    "conventionMetadata": {
+      "type": "object",
+      "description": "Convention metadata object for use in zarr_conventions array",
+      "properties": {
+        "schema_url": {
+          "type": "string",
+          "const": "https://raw.githubusercontent.com/clbarnes/zarr-convention-license/refs/tags/v1/schema.json",
+          "description": "URL to the JSON Schema definition for this convention"
+        },
+        "spec_url": {
+          "type": "string",
+          "const": "https://github.com/clbarnes/zarr-convention-license/blob/v1/README.md",
+          "description": "URL to the full specification document"
+        },
+        "uuid": {
+          "type": "string",
+          "const": "b77365e5-2b0c-4141-b917-c03b7c68e935",
+          "description": "UUID that permanently identifies this convention"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the convention. Should be 'license'"
+        },
+        "description": {
+          "type": "string",
+          "const": "License specifier for Zarr data",
+          "description": "Brief description of the convention's purpose and usage"
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["schema_url"]
+        },
+        {
+          "required": ["spec_url"]
+        },
+        {
+          "required": ["uuid"]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "license": {
+      "type": "object",
+      "description": "Licensing information for this data",
+      "properties": {
+        "spdx": {
+          "type": "string",
+          "description": "SPDX identifier of the license."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to the full text of the license."
+        },
+        "text": {
+          "type": "string",
+          "description": "Full text of the license."
+        },
+        "file": {
+          "type": "string",
+          "description": "Path to an object containing the full text of the license."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path to a Zarr node with license metadata."
+        }
+      },
+      "anyOf": [
+        {
+          "required": [
+            "spdx"
+          ]
+        },
+        {
+          "required": [
+            "url"
+          ]
+        },
+        {
+          "required": [
+            "text"
+          ]
+        },
+        {
+          "required": [
+            "file"
+          ]
+        },
+        {
+          "required": [
+            "path"
+          ]
+        }
+      ]
+    }
+  }
+}

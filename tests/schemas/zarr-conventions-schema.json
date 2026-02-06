@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://zarr-conventions.github.io/zarr-conventions-spec/zarr-conventions-schema.json",
+  "title": "Zarr Conventions Specification",
+  "description": "JSON schema for validating Zarr conventions metadata",
+  "type": "object",
+  "properties": {
+    "attributes": {
+      "type": "object",
+      "properties": {
+        "zarr_conventions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/conventionMetadataObject"
+          },
+          "description": "Array of convention metadata objects describing conventions that apply to this node"
+        }
+      },
+      "required": ["zarr_conventions"],
+      "additionalProperties": true
+    }
+  },
+  "required": ["attributes"],
+  "additionalProperties": true,
+  "$defs": {
+    "conventionMetadataObject": {
+      "type": "object",
+      "properties": {
+        "schema_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL which resolves to a JSON schema document describing the convention's properties"
+        },
+        "spec_url": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL which resolves to a document describing the Convention in more detail"
+        },
+        "uuid": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+          "description": "A UUID (Universally Unique Identifier) that permanently identifies the convention"
+        },
+        "name": {
+          "type": "string",
+          "description": "A short human-readable name used to represent the Convention"
+        },
+        "description": {
+          "type": "string",
+          "description": "A concise description of the convention"
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["schema_url"]
+        },
+        {
+          "required": ["spec_url"]
+        },
+        {
+          "required": ["uuid"]
+        }
+      ],
+      "additionalProperties": false
+    }
+  }
+}

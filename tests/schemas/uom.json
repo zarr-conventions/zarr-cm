@@ -1,0 +1,108 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UOM Convention",
+  "description": "Schema for UOM Zarr convention",
+  "type": "object",
+  "properties": {
+    "zarr_format": {
+      "type": "integer",
+      "description": "Zarr format version"
+    },
+    "node_type": {
+      "type": "string",
+      "const": "array",
+      "description": "Type of Zarr node"
+    },
+    "attributes": {
+      "type": "object",
+      "description": "Zarr attributes containing convention metadata and properties",
+      "properties": {
+        "zarr_conventions": {
+          "type": "array",
+          "description": "Array of convention metadata objects",
+          "contains": {
+            "$ref": "#/$defs/conventionMetadata"
+          }
+        },
+        "uom": {
+          "$ref": "#/$defs/uom"
+        }
+      },
+      "required": ["zarr_conventions", "uom"]
+    }
+  },
+  "required": ["zarr_format", "node_type", "attributes"],
+  "additionalProperties": true,
+  "$defs": {
+    "conventionMetadata": {
+      "type": "object",
+      "description": "Convention metadata object for use in zarr_conventions array",
+      "properties": {
+        "schema_url": {
+          "type": "string",
+          "const": "https://raw.githubusercontent.com/clbarnes/zarr-convention-uom/refs/tags/v1/schema.json",
+          "description": "URL to the JSON Schema definition for this convention"
+        },
+        "spec_url": {
+          "type": "string",
+          "const": "https://github.com/clbarnes/zarr-convention-uom/blob/v1/README.md",
+          "description": "URL to the full specification document"
+        },
+        "uuid": {
+          "type": "string",
+          "const": "3bbe438d-df37-49fe-8e2b-739296d46dfb",
+          "description": "UUID that permanently identifies this convention"
+        },
+        "name": {
+          "type": "string",
+          "description": "Human-readable name of the convention. Should be 'uom'"
+        },
+        "description": {
+          "type": "string",
+          "const": "Units of measurement for Zarr arrays",
+          "description": "Brief description of the convention's purpose and usage"
+        }
+      },
+      "anyOf": [
+        {
+          "required": ["schema_url"]
+        },
+        {
+          "required": ["spec_url"]
+        },
+        {
+          "required": ["uuid"]
+        }
+      ],
+      "additionalProperties": false
+    },
+    "uom": {
+      "type": "object",
+      "description": "Unit of measurement for this numeric array data",
+      "properties": {
+        "description": {
+          "type": "string",
+          "description": "Free-text description of the unit of measurement"
+        },
+        "ucum": {
+          "$ref": "#/$defs/ucum"
+        }
+      },
+      "required": ["ucum"]
+    },
+    "ucum": {
+      "type": "object",
+      "description": "Unified Code for Units of Measurement information",
+      "properties": {
+        "version": {
+          "type": "string",
+          "description": "UCUM specification version"
+        },
+        "unit": {
+          "type": "string",
+          "description": "UCUM unit string"
+        }
+      }
+    }
+  }
+}
