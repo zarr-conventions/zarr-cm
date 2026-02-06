@@ -58,6 +58,8 @@ repos:
         additional_dependencies:
           - nox
           - pytest
+          - pytest-examples
+          - types-jsonschema
 
   - repo: https://github.com/codespell-project/codespell
     rev: "v2.4.1"

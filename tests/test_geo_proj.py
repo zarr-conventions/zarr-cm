@@ -5,11 +5,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import geo_proj
 from zarr_cm.geo_proj import CMO, GeoProjAttrs
-
-from conftest import wrap_attrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "geo-proj.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -106,7 +105,7 @@ def test_validate_valid() -> None:
 
 def test_validate_empty() -> None:
     with pytest.raises(ValueError, match="Exactly one"):
-        geo_proj.validate({})  # type: ignore[typeddict-item]
+        geo_proj.validate({})
 
 
 def test_validate_multiple() -> None:

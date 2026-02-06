@@ -61,9 +61,7 @@ def insert_convention(
             msg = f"attrs already contains keys that would be overwritten by convention data: {sorted(collisions)}. Pass overwrite=True to allow."
             raise ValueError(msg)
     result = {**attrs, **convention_data}
-    existing: list[ConventionMetadataObject] = list(
-        result.get("zarr_conventions", [])
-    )
+    existing: list[ConventionMetadataObject] = list(result.get("zarr_conventions", []))
     if cmo not in existing:
         existing.append(cmo)
     result["zarr_conventions"] = existing
@@ -92,9 +90,7 @@ def extract_convention(
         else:
             remaining[key] = value
 
-    old_conventions: list[ConventionMetadataObject] = attrs.get(
-        "zarr_conventions", []
-    )
+    old_conventions: list[ConventionMetadataObject] = attrs.get("zarr_conventions", [])
     new_conventions = [cmo for cmo in old_conventions if not match_fn(cmo)]
     if new_conventions:
         remaining["zarr_conventions"] = new_conventions

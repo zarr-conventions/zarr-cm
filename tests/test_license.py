@@ -5,11 +5,10 @@ from pathlib import Path
 
 import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import license
 from zarr_cm.license import CMO, LicenseAttrs
-
-from conftest import wrap_attrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "license.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())

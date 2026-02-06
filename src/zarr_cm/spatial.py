@@ -124,7 +124,10 @@ def validate(data: dict[str, Any]) -> SpatialAttrs:
                 msg = f"'{key}' must have {' or '.join(str(v) for v in valid)} items, got {n}"
                 raise ValueError(msg)
 
-    if "spatial:registration" in data and data["spatial:registration"] not in _VALID_REGISTRATIONS:
+    if (
+        "spatial:registration" in data
+        and data["spatial:registration"] not in _VALID_REGISTRATIONS
+    ):
         msg = f"'spatial:registration' must be one of {_VALID_REGISTRATIONS}, got {data['spatial:registration']!r}"
         raise ValueError(msg)
     return data  # type: ignore[return-value]
