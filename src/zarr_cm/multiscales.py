@@ -1,3 +1,5 @@
+"""multiscales convention: https://github.com/zarr-conventions/multiscales"""
+
 from __future__ import annotations
 
 from typing import Any, Final, NotRequired, TypedDict

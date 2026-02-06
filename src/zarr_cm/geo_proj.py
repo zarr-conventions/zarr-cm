@@ -1,3 +1,5 @@
+"""geo-proj convention: https://github.com/zarr-experimental/geo-proj"""
+
 from __future__ import annotations
 
 from typing import Any, Final, NotRequired, TypedDict
