@@ -37,6 +37,8 @@ Homepage = "https://github.com/zarr-conventions/zarr-cm"
 Discussions = "https://github.com/zarr-conventions/zarr-cm/discussions"
 Changelog = "https://github.com/zarr-conventions/zarr-cm/releases"
 
+[project.optional-dependencies]
+pydantic = ["pydantic>=2.7"]
 
 [dependency-groups]
 test = [
@@ -44,6 +46,7 @@ test = [
   "pytest-cov >=7",
   "pytest-examples >=0.0.14",
   "jsonschema >=4",
+  "pydantic >=2.7",
 ]
 dev = [
   { include-group = "test" },
