@@ -59,6 +59,7 @@ repos:
           - nox
           - pytest
           - pytest-examples
+          - pydantic>=2.7
           - types-jsonschema
 
   - repo: https://github.com/codespell-project/codespell

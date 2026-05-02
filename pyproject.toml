@@ -96,6 +96,7 @@ report.exclude_also = [
 [tool.mypy]
 files = ["src", "tests"]
 python_version = "3.11"
+plugins = ["pydantic.mypy"]
 warn_unused_configs = true
 strict = true
 enable_error_code = ["ignore-without-code", "redundant-expr", "truthy-bool"]

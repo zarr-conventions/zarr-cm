@@ -1,0 +1,17 @@
+"""Optional pydantic models for zarr-cm conventions.
+
+Requires the ``pydantic`` extra::
+
+    pip install zarr-cm[pydantic]
+"""
+
+from __future__ import annotations
+
+try:
+    import pydantic  # noqa: F401
+except ImportError as e:  # pragma: no cover - exercised via packaging tests
+    msg = (
+        "zarr_cm.pydantic requires pydantic. "
+        "Install with: pip install zarr-cm[pydantic]"
+    )
+    raise ImportError(msg) from e
