@@ -15,3 +15,11 @@ except ImportError as e:  # pragma: no cover - exercised via packaging tests
         "Install with: pip install zarr-cm[pydantic]"
     )
     raise ImportError(msg) from e
+
+from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic.geo_proj import GeoProjModel
+
+__all__ = [
+    "ConventionModel",
+    "GeoProjModel",
+]
