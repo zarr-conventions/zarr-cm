@@ -19,14 +19,22 @@ except ImportError as e:  # pragma: no cover - exercised via packaging tests
 from zarr_cm.pydantic._base import ConventionModel
 from zarr_cm.pydantic.geo_proj import GeoProjModel
 from zarr_cm.pydantic.license import LicenseModel
+from zarr_cm.pydantic.multiscales import (
+    LayoutObjectModel,
+    MultiscalesModel,
+    TransformModel,
+)
 from zarr_cm.pydantic.spatial import SpatialModel
 from zarr_cm.pydantic.uom import UCUMModel, UomModel
 
 __all__ = [
     "ConventionModel",
     "GeoProjModel",
+    "LayoutObjectModel",
     "LicenseModel",
+    "MultiscalesModel",
     "SpatialModel",
+    "TransformModel",
     "UCUMModel",
     "UomModel",
 ]
