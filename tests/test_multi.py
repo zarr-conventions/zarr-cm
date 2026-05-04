@@ -8,6 +8,11 @@ import zarr_cm
 from zarr_cm import (
     ALL_CONVENTION_KEYS,
     CONVENTION_NAMES,
+    GEO_PROJ,
+    LICENSE,
+    MULTISCALES,
+    SPATIAL,
+    UOM,
     ConventionName,
     create_many,
     extract_all,
@@ -22,6 +27,17 @@ def test_convention_names_constant() -> None:
     assert (
         frozenset({"geo-proj", "spatial", "multiscales", "license", "uom"})
         == CONVENTION_NAMES
+    )
+
+
+def test_convention_name_constants() -> None:
+    assert GEO_PROJ == "geo-proj"
+    assert SPATIAL == "spatial"
+    assert MULTISCALES == "multiscales"
+    assert LICENSE == "license"
+    assert UOM == "uom"
+    assert frozenset({GEO_PROJ, SPATIAL, MULTISCALES, LICENSE, UOM}) == frozenset(
+        get_args(ConventionName)
     )
 
 
