@@ -102,3 +102,39 @@ print(extracted)
 ```
 
 <!-- blacken-docs:on -->
+
+## Optional: pydantic models
+
+Install with the `pydantic` extra to get pydantic v2 models for each convention:
+
+```bash
+pip install zarr-cm[pydantic]
+```
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm.pydantic import GeoProjModel, LicenseModel, build_attrs, parse_attrs
+
+attrs = build_attrs(
+    GeoProjModel(code="EPSG:4326"),
+    LicenseModel(spdx="MIT"),
+    base={"foo": "bar"},
+)
+# attrs == {
+#     "foo": "bar",
+#     "proj:code": "EPSG:4326",
+#     "license": {"spdx": "MIT"},
+#     "zarr_conventions": [<geo-proj CMO>, <license CMO>],
+# }
+
+remaining, models = parse_attrs(attrs)
+# remaining == {"foo": "bar"}
+# models == {"geo-proj": GeoProjModel(...), "license": LicenseModel(...)}
+```
+
+<!-- blacken-docs:on -->
+
+The pydantic layer is purely additive; the existing
+`zarr_cm.geo_proj.create(...)` etc. functions continue to work without pydantic
+installed.
