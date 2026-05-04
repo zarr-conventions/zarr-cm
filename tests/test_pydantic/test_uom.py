@@ -36,3 +36,13 @@ def test_round_trip() -> None:
 def test_extract_absent_returns_none() -> None:
     _remaining, parsed = UomModel.extract({"foo": "bar"})
     assert parsed is None
+
+
+def test_from_attrs_accepts_inner_form() -> None:
+    m = UomModel.from_attrs({"ucum": {"unit": "m"}})
+    assert m.ucum.unit == "m"
+
+
+def test_from_attrs_accepts_wrapped_form() -> None:
+    m = UomModel.from_attrs({"uom": {"ucum": {"unit": "m"}}})
+    assert m.ucum.unit == "m"

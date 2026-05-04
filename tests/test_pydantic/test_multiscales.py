@@ -56,3 +56,13 @@ def test_round_trip() -> None:
 def test_extract_absent_returns_none() -> None:
     _remaining, parsed = MultiscalesModel.extract({"foo": "bar"})
     assert parsed is None
+
+
+def test_from_attrs_accepts_inner_form() -> None:
+    m = MultiscalesModel.from_attrs({"layout": [{"asset": "s0"}]})
+    assert m.layout[0].asset == "s0"
+
+
+def test_from_attrs_accepts_wrapped_form() -> None:
+    m = MultiscalesModel.from_attrs({"multiscales": {"layout": [{"asset": "s0"}]}})
+    assert m.layout[0].asset == "s0"
