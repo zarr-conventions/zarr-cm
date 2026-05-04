@@ -114,23 +114,40 @@ pip install zarr-cm[pydantic]
 <!-- blacken-docs:off -->
 <!-- prettier-ignore -->
 ```python
-from zarr_cm.pydantic import GeoProjModel, LicenseModel, build_attrs, parse_attrs
+from zarr_cm.pydantic import (
+    GeoProjModel,
+    LayoutObjectModel,
+    LicenseModel,
+    MultiscalesModel,
+    UomModel,
+    build_attrs,
+    parse_attrs,
+)
 
 attrs = build_attrs(
     GeoProjModel(code="EPSG:4326"),
     LicenseModel(spdx="MIT"),
+    UomModel(ucum="m"),
+    MultiscalesModel(layout=[LayoutObjectModel(asset="s0")]),
     base={"foo": "bar"},
 )
 # attrs == {
 #     "foo": "bar",
 #     "proj:code": "EPSG:4326",
 #     "license": {"spdx": "MIT"},
-#     "zarr_conventions": [<geo-proj CMO>, <license CMO>],
+#     "uom": {"ucum": {"unit": "m"}},
+#     "multiscales": {"layout": [{"asset": "s0"}]},
+#     "zarr_conventions": [<geo-proj CMO>, <license CMO>, <uom CMO>, <multiscales CMO>],
 # }
 
 remaining, models = parse_attrs(attrs)
 # remaining == {"foo": "bar"}
-# models == {"geo-proj": GeoProjModel(...), "license": LicenseModel(...)}
+# models == {
+#     "geo-proj": GeoProjModel(...),
+#     "license": LicenseModel(...),
+#     "uom": UomModel(...),
+#     "multiscales": MultiscalesModel(...),
+# }
 ```
 
 <!-- blacken-docs:on -->

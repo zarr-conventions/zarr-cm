@@ -15,6 +15,29 @@ def test_construct_from_dict_ucum() -> None:
     assert m.ucum.unit == "m"
 
 
+def test_construct_from_string_ucum() -> None:
+    m = UomModel(ucum="m")
+    assert isinstance(m.ucum, UCUMModel)
+    assert m.ucum.unit == "m"
+    assert m.ucum.version is None
+
+
+def test_string_coercion_round_trips() -> None:
+    m = UomModel(ucum="m", description="length")
+    attrs = m.insert({})
+    remaining, parsed = UomModel.extract(attrs)
+    assert remaining == {}
+    assert parsed == m
+    assert parsed is not None
+    assert parsed.ucum.unit == "m"
+
+
+def test_existing_ucum_model_form_still_works() -> None:
+    m = UomModel(ucum=UCUMModel(unit="m", version="2.1"))
+    assert m.ucum.unit == "m"
+    assert m.ucum.version == "2.1"
+
+
 def test_to_attrs_wraps_under_uom_key() -> None:
     m = UomModel(ucum=UCUMModel(unit="m", version="2.1"))
     assert m.to_attrs() == {"uom": {"ucum": {"unit": "m", "version": "2.1"}}}

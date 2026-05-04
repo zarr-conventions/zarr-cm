@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, ClassVar, cast
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 
 from zarr_cm import uom
 from zarr_cm.pydantic._base import ConventionModel
@@ -27,6 +27,13 @@ class UomModel(ConventionModel):
 
     ucum: UCUMModel
     description: str | None = None
+
+    @field_validator("ucum", mode="before")
+    @classmethod
+    def _coerce_ucum(cls, value: object) -> object:
+        if isinstance(value, str):
+            return {"unit": value}
+        return value
 
     _CMO: ClassVar[ConventionMetadataObject] = uom.CMO
     _MODULE: ClassVar[Any] = uom
