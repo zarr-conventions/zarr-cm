@@ -51,6 +51,9 @@ Each module provides:
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
 
+Pydantic v2 models are available as an [optional extra](#optional-pydantic-models)
+for users who want validated constructors and IDE-friendly attribute access.
+
 ## Installation
 
 ```bash
@@ -180,5 +183,4 @@ print(models[LICENSE].spdx)
 
 `build_attrs` produces and `parse_attrs` consumes plain dicts, so they drop
 straight into a Zarr v3 array's `attrs`. Write with
-`arr.attrs.put(build_attrs(...))`; read with
-`parse_attrs(dict(arr.attrs))`.
+`arr.attrs.put(build_attrs(...))`; read with `parse_attrs(dict(arr.attrs))`.
