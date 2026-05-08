@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self
 from pydantic import Field, model_validator
 
 from zarr_cm import geo_proj
-from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic._base import ConventionModel, ConventionModuleProtocol
 
 if TYPE_CHECKING:
     from zarr_cm._core import ConventionMetadataObject
+    from zarr_cm.geo_proj import GeoProjAttrs
 
 
 class GeoProjModel(ConventionModel):
@@ -21,7 +22,7 @@ class GeoProjModel(ConventionModel):
     projjson: dict[str, Any] | None = Field(default=None, alias="proj:projjson")
 
     _CMO: ClassVar[ConventionMetadataObject] = geo_proj.CMO
-    _MODULE: ClassVar[Any] = geo_proj
+    _MODULE: ClassVar[ConventionModuleProtocol[GeoProjAttrs]] = geo_proj
 
     @model_validator(mode="after")
     def _validate(self) -> Self:

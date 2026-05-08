@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 from pydantic import model_validator
 
 from zarr_cm import license as _license_module
-from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic._base import ConventionModel, ConventionModuleProtocol
 
 if TYPE_CHECKING:
     from zarr_cm._core import ConventionMetadataObject
+    from zarr_cm.license import LicenseAttrs
 
 
 class LicenseModel(ConventionModel):
@@ -23,7 +24,7 @@ class LicenseModel(ConventionModel):
     path: str | None = None
 
     _CMO: ClassVar[ConventionMetadataObject] = _license_module.CMO
-    _MODULE: ClassVar[Any] = _license_module
+    _MODULE: ClassVar[ConventionModuleProtocol[LicenseAttrs]] = _license_module
 
     @model_validator(mode="after")
     def _validate(self) -> Self:
@@ -39,10 +40,8 @@ class LicenseModel(ConventionModel):
         self, attrs: dict[str, Any], *, overwrite: bool = False
     ) -> dict[str, Any]:
         # Pass the unwrapped form because _MODULE.insert wraps internally.
-        return cast(
-            "dict[str, Any]",
-            self._MODULE.insert(attrs, super().to_attrs(), overwrite=overwrite),
-        )
+        data = cast("LicenseAttrs", super().to_attrs())
+        return self._MODULE.insert(attrs, data, overwrite=overwrite)
 
     @classmethod
     def from_attrs(cls, attrs: dict[str, Any]) -> LicenseModel:

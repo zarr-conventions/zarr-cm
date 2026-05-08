@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, cast
 from pydantic import BaseModel, ConfigDict, field_validator
 
 from zarr_cm import uom
-from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic._base import ConventionModel, ConventionModuleProtocol
 
 if TYPE_CHECKING:
     from zarr_cm._core import ConventionMetadataObject
+    from zarr_cm.uom import UomAttrs
 
 
 class UCUMModel(BaseModel):
@@ -36,7 +37,7 @@ class UomModel(ConventionModel):
         return value
 
     _CMO: ClassVar[ConventionMetadataObject] = uom.CMO
-    _MODULE: ClassVar[Any] = uom
+    _MODULE: ClassVar[ConventionModuleProtocol[UomAttrs]] = uom
 
     def to_attrs(self) -> dict[str, Any]:
         return {"uom": super().to_attrs()}
@@ -45,10 +46,8 @@ class UomModel(ConventionModel):
         self, attrs: dict[str, Any], *, overwrite: bool = False
     ) -> dict[str, Any]:
         # Pass the unwrapped form because _MODULE.insert wraps internally.
-        return cast(
-            "dict[str, Any]",
-            self._MODULE.insert(attrs, super().to_attrs(), overwrite=overwrite),
-        )
+        data = cast("UomAttrs", super().to_attrs())
+        return self._MODULE.insert(attrs, data, overwrite=overwrite)
 
     @classmethod
     def from_attrs(cls, attrs: dict[str, Any]) -> UomModel:

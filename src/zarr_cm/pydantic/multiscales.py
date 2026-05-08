@@ -7,10 +7,11 @@ from typing import TYPE_CHECKING, Any, ClassVar, Self, cast
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from zarr_cm import multiscales
-from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic._base import ConventionModel, ConventionModuleProtocol
 
 if TYPE_CHECKING:
     from zarr_cm._core import ConventionMetadataObject
+    from zarr_cm.multiscales import MultiscalesAttrs
 
 
 class TransformModel(BaseModel):
@@ -47,7 +48,7 @@ class MultiscalesModel(ConventionModel):
     resampling_method: str | None = None
 
     _CMO: ClassVar[ConventionMetadataObject] = multiscales.CMO
-    _MODULE: ClassVar[Any] = multiscales
+    _MODULE: ClassVar[ConventionModuleProtocol[MultiscalesAttrs]] = multiscales
 
     def to_attrs(self) -> dict[str, Any]:
         return {"multiscales": super().to_attrs()}
@@ -56,10 +57,8 @@ class MultiscalesModel(ConventionModel):
         self, attrs: dict[str, Any], *, overwrite: bool = False
     ) -> dict[str, Any]:
         # Pass the unwrapped form because _MODULE.insert wraps internally.
-        return cast(
-            "dict[str, Any]",
-            self._MODULE.insert(attrs, super().to_attrs(), overwrite=overwrite),
-        )
+        data = cast("MultiscalesAttrs", super().to_attrs())
+        return self._MODULE.insert(attrs, data, overwrite=overwrite)
 
     @classmethod
     def from_attrs(cls, attrs: dict[str, Any]) -> MultiscalesModel:

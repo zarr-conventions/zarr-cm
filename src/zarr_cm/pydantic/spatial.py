@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, Literal, Self
+from typing import TYPE_CHECKING, ClassVar, Literal, Self
 
 from pydantic import Field, model_validator
 
 from zarr_cm import spatial
-from zarr_cm.pydantic._base import ConventionModel
+from zarr_cm.pydantic._base import ConventionModel, ConventionModuleProtocol
 
 if TYPE_CHECKING:
     from zarr_cm._core import ConventionMetadataObject
+    from zarr_cm.spatial import SpatialAttrs
 
 
 class SpatialModel(ConventionModel):
@@ -26,7 +27,7 @@ class SpatialModel(ConventionModel):
     )
 
     _CMO: ClassVar[ConventionMetadataObject] = spatial.CMO
-    _MODULE: ClassVar[Any] = spatial
+    _MODULE: ClassVar[ConventionModuleProtocol[SpatialAttrs]] = spatial
 
     @model_validator(mode="after")
     def _validate(self) -> Self:

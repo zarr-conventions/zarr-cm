@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, ClassVar, cast
+from typing import TYPE_CHECKING, Any, ClassVar, Protocol, TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -10,6 +10,28 @@ if TYPE_CHECKING:
     from typing import Self
 
     from zarr_cm._core import ConventionMetadataObject
+
+DataT = TypeVar("DataT")
+
+
+class ConventionModuleProtocol(Protocol[DataT]):
+    """The surface of a convention module that ``ConventionModel`` depends on.
+
+    Generic on the concrete convention's TypedDict so each subclass can bind
+    to its own data shape (``GeoProjAttrs``, ``MultiscalesAttrs``, etc.).
+    """
+
+    UUID: str
+
+    def insert(
+        self,
+        attrs: dict[str, Any],
+        data: DataT,
+        *,
+        overwrite: bool = False,
+    ) -> dict[str, Any]: ...
+
+    def extract(self, attrs: dict[str, Any]) -> tuple[dict[str, Any], DataT]: ...
 
 
 class ConventionModel(BaseModel):
@@ -27,7 +49,7 @@ class ConventionModel(BaseModel):
     )
 
     _CMO: ClassVar[ConventionMetadataObject]
-    _MODULE: ClassVar[Any]
+    _MODULE: ClassVar[ConventionModuleProtocol[Any]]
 
     def to_attrs(self) -> dict[str, Any]:
         """Dump to the JSON-shaped dict (the TypedDict form)."""
@@ -42,10 +64,7 @@ class ConventionModel(BaseModel):
         self, attrs: dict[str, Any], *, overwrite: bool = False
     ) -> dict[str, Any]:
         """Insert this convention into a Zarr attributes dict."""
-        return cast(
-            "dict[str, Any]",
-            self._MODULE.insert(attrs, self.to_attrs(), overwrite=overwrite),
-        )
+        return self._MODULE.insert(attrs, self.to_attrs(), overwrite=overwrite)
 
     @classmethod
     def extract(cls, attrs: dict[str, Any]) -> tuple[dict[str, Any], Self | None]:
@@ -61,5 +80,5 @@ class ConventionModel(BaseModel):
         )
         remaining, data = cls._MODULE.extract(attrs)
         if not present:
-            return cast("tuple[dict[str, Any], Self | None]", (remaining, None))
+            return remaining, None
         return remaining, cls.from_attrs(dict(data))
