@@ -186,3 +186,6 @@ Thumbs.db
 # Common editor files
 *~
 *.swp
+
+# Local-only planning docs (Claude Code superpowers skill outputs)
+docs/superpowers/
