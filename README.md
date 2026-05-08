@@ -51,6 +51,10 @@ Each module provides:
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
 
+Pydantic v2 models are available as an
+[optional extra](#optional-pydantic-models) for users who want validated
+constructors and IDE-friendly attribute access.
+
 ## Installation
 
 ```bash
@@ -102,3 +106,82 @@ print(extracted)
 ```
 
 <!-- blacken-docs:on -->
+
+## Optional: pydantic models
+
+Install with the `pydantic` extra to get pydantic v2 models for each convention:
+
+```bash
+pip install zarr-cm[pydantic]
+```
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm.pydantic import (
+    GeoProjModel,
+    LayoutObjectModel,
+    LicenseModel,
+    MultiscalesModel,
+    UomModel,
+    build_attrs,
+    parse_attrs,
+)
+
+attrs = build_attrs(
+    GeoProjModel(code="EPSG:4326"),
+    LicenseModel(spdx="MIT"),
+    UomModel(ucum="m"),
+    MultiscalesModel(layout=[LayoutObjectModel(asset="s0")]),
+    base={"foo": "bar"},
+)
+# attrs == {
+#     "foo": "bar",
+#     "proj:code": "EPSG:4326",
+#     "license": {"spdx": "MIT"},
+#     "uom": {"ucum": {"unit": "m"}},
+#     "multiscales": {"layout": [{"asset": "s0"}]},
+#     "zarr_conventions": [<geo-proj CMO>, <license CMO>, <uom CMO>, <multiscales CMO>],
+# }
+
+remaining, models = parse_attrs(attrs)
+# remaining == {"foo": "bar"}
+# models == {
+#     "geo-proj": GeoProjModel(...),
+#     "license": LicenseModel(...),
+#     "uom": UomModel(...),
+#     "multiscales": MultiscalesModel(...),
+# }
+```
+
+<!-- blacken-docs:on -->
+
+The pydantic layer is purely additive; the existing
+`zarr_cm.geo_proj.create(...)` etc. functions continue to work without pydantic
+installed.
+
+The `parse_attrs` result is keyed by convention name. For autocomplete-friendly
+access, import the name constants instead of typing the strings:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import GEO_PROJ, LICENSE
+from zarr_cm.pydantic import GeoProjModel, LicenseModel, build_attrs, parse_attrs
+
+attrs = build_attrs(GeoProjModel(code="EPSG:4326"), LicenseModel(spdx="MIT"))
+_remaining, models = parse_attrs(attrs)
+
+print(models[GEO_PROJ].code)
+#> EPSG:4326
+print(models[LICENSE].spdx)
+#> MIT
+```
+
+<!-- blacken-docs:on -->
+
+### Using with `zarr-python`
+
+`build_attrs` produces and `parse_attrs` consumes plain dicts, so they drop
+straight into a Zarr v3 array's `attrs`. Write with
+`arr.attrs.put(build_attrs(...))`; read with `parse_attrs(dict(arr.attrs))`.
