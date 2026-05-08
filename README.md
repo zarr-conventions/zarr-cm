@@ -51,8 +51,9 @@ Each module provides:
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
 
-Pydantic v2 models are available as an [optional extra](#optional-pydantic-models)
-for users who want validated constructors and IDE-friendly attribute access.
+Pydantic v2 models are available as an
+[optional extra](#optional-pydantic-models) for users who want validated
+constructors and IDE-friendly attribute access.
 
 ## Installation
 

@@ -148,8 +148,9 @@ print(models[LICENSE].spdx)
 
 <!-- blacken-docs:on -->
 
-The pydantic layer is purely additive; the `create`/`insert`/`extract`/`validate`
-functions on each convention module continue to work without pydantic installed.
+The pydantic layer is purely additive; the
+`create`/`insert`/`extract`/`validate` functions on each convention module
+continue to work without pydantic installed.
 
 ### Using with `zarr-python`
 
