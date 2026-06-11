@@ -110,6 +110,10 @@ def detect_revision(
     ``schema_url`` equals that CMO's ``schema_url``. Returns ``None`` if the
     convention is absent, or present but carrying an unrecognized schema_url
     (e.g. a legacy/dangling URL) -- callers fall back to the latest revision.
+
+    Entries in ``zarr_conventions`` are assumed to be CMO dicts (consistent
+    with the rest of this module). Revisions are assumed to have distinct
+    ``schema_url`` values; if two share one, the inverse mapping is ambiguous.
     """
     by_url = {url: label for label, url in schema_url_by_revision.items()}
     for cmo in attrs.get("zarr_conventions", []):

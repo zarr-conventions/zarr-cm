@@ -3,7 +3,7 @@
 Formerly known as geo-proj. ``r1`` is the original draft kept verbatim with
 its historical URLs so existing documents round-trip correctly. The
 package-level functions dispatch by a keyword-only ``revision`` argument and
-default to the latest revision.
+default to the latest revision for writes / auto-detect for reads.
 """
 
 from __future__ import annotations
