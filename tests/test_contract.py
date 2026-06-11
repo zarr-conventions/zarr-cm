@@ -18,10 +18,9 @@ def _dispatch_targets() -> list[tuple[str, object]]:
     return targets
 
 
-def test_contract_module_imports() -> None:
-    # The TYPE_CHECKING static-check block is invisible at runtime; this proves
-    # the module itself imports cleanly.
-    import zarr_cm._contract  # noqa: F401, PLC0415
+# Note: importing ConventionModule at module scope (above) already proves
+# zarr_cm._contract imports cleanly at runtime — if it didn't, this whole test
+# module would fail to collect. No separate import test is needed.
 
 
 def test_all_dispatch_targets_satisfy_contract() -> None:
