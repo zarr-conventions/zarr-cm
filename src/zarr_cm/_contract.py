@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Mapping
+    from collections.abc import Mapping
 
     from ._core import ConventionMetadataObject
 
@@ -25,15 +25,15 @@ class ConventionModule(Protocol):
     CMO: ConventionMetadataObject
     CONVENTION_KEYS: set[str]
 
-    # ``create`` is typed as an attribute, not a method: each convention's
-    # ``create`` has a distinct concrete keyword signature (e.g. ``dimensions``,
-    # ``bbox``) with *required* keyword params, which is structurally incompatible
-    # with a uniform ``create(**kwargs: Any)`` method. As a Protocol attribute the
-    # return type is matched invariantly, so even ``Callable[..., Mapping[str, Any]]``
-    # rejects a ``-> SpatialAttrs`` (TypedDict) function; ``Callable[..., Any]`` is
-    # the minimal form that accepts every convention's ``create`` while still
-    # requiring the member to exist and be callable.
-    create: Callable[..., Any]
+    # ``create`` uses ``*args, **kwargs`` because each convention's ``create`` has
+    # a distinct concrete keyword signature (e.g. ``dimensions``, ``bbox``) with
+    # *required* keyword params — not substitutable for a fixed parameter list.
+    # As a *method* (not a ``Callable`` attribute) the params are checked
+    # contravariantly so ``*args, **kwargs`` accepts any of them, while the return
+    # type stays covariant — so ``-> Mapping[str, Any]`` still has teeth: a
+    # ``create`` returning a non-mapping fails the check (a ``Callable`` attribute
+    # would lose that, matching the return invariantly and forcing ``Any``).
+    def create(self, *args: Any, **kwargs: Any) -> Mapping[str, Any]: ...
 
     def insert(
         self, attrs: dict[str, Any], data: Any, *, overwrite: bool = ...
