@@ -13,7 +13,7 @@ if typing.TYPE_CHECKING:
     import types
     from collections.abc import Iterable
 
-from . import geo_proj, multiscales, spatial, uom
+from . import geo_proj, multiscales, proj, spatial, uom
 from . import license as license_
 from ._core import (
     ConventionAttrs,
@@ -35,7 +35,7 @@ from .uom import UCUM, UomAttrs, UomConventionAttrs
 ConventionName = Literal["geo-proj", "spatial", "multiscales", "license", "uom"]
 
 _REGISTRY: Final[dict[ConventionName, types.ModuleType]] = {
-    "geo-proj": geo_proj,
+    "geo-proj": proj,
     "spatial": spatial,
     "multiscales": multiscales,
     "license": license_,
@@ -86,6 +86,18 @@ def _get_module(name: ConventionName) -> types.ModuleType:
         raise ValueError(msg) from None
 
 
+def _rev_kwargs(
+    mod: types.ModuleType,
+    revisions: dict[ConventionName, str] | None,
+    name: ConventionName,
+) -> dict[str, str]:
+    """Return ``{'revision': label}`` if this module supports revisions and a
+    label was requested for *name*, else an empty dict."""
+    if revisions and name in revisions and hasattr(mod, "_REVISIONS"):
+        return {"revision": revisions[name]}
+    return {}
+
+
 def _detect_conventions(attrs: dict[str, Any]) -> frozenset[ConventionName]:
     """Identify which conventions are present by matching UUIDs in zarr_conventions."""
     uuids = {cmo.get("uuid") for cmo in attrs.get("zarr_conventions", [])}
@@ -94,6 +106,8 @@ def _detect_conventions(attrs: dict[str, Any]) -> frozenset[ConventionName]:
 
 def create_many(
     conventions: dict[ConventionName, dict[str, Any]],
+    *,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> dict[str, Any]:
     """Create and insert multiple conventions into a single attributes dict.
 
@@ -102,6 +116,10 @@ def create_many(
     conventions
         Mapping from convention display name (e.g. ``"geo-proj"``) to
         already-formed convention data (the ``AttrsT`` value).
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
@@ -112,14 +130,17 @@ def create_many(
     result: dict[str, Any] = {}
     for name, data in conventions.items():
         mod = _get_module(name)
-        mod.validate(data)
-        result = mod.insert(result, data, overwrite=True)
+        rk = _rev_kwargs(mod, revisions, name)
+        mod.validate(data, **rk)
+        result = mod.insert(result, data, overwrite=True, **rk)
     return result
 
 
 def validate_many(
     attrs: dict[str, Any],
     conventions: Iterable[ConventionName],
+    *,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> dict[str, Any]:
     """Validate multiple conventions within an attributes dict.
 
@@ -129,6 +150,10 @@ def validate_many(
         The attributes dict to validate.
     conventions
         Convention names to validate.
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
@@ -137,8 +162,9 @@ def validate_many(
     """
     for name in conventions:
         mod = _get_module(name)
-        _, extracted = mod.extract(attrs)
-        mod.validate(dict(extracted))
+        rk = _rev_kwargs(mod, revisions, name)
+        _, extracted = mod.extract(attrs, **rk)
+        mod.validate(dict(extracted), **rk)
     return attrs
 
 
@@ -147,6 +173,7 @@ def insert_many(
     conventions: dict[ConventionName, dict[str, Any]],
     *,
     overwrite: bool = False,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> dict[str, Any]:
     """Insert multiple conventions into an attributes dict.
 
@@ -159,6 +186,10 @@ def insert_many(
     overwrite
         If False (default), raise ``ValueError`` when *attrs* already
         contains keys present in a convention's data.
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
@@ -168,14 +199,17 @@ def insert_many(
     result = attrs
     for name, data in conventions.items():
         mod = _get_module(name)
-        mod.validate(data)
-        result = mod.insert(result, data, overwrite=overwrite)
+        rk = _rev_kwargs(mod, revisions, name)
+        mod.validate(data, **rk)
+        result = mod.insert(result, data, overwrite=overwrite, **rk)
     return result
 
 
 def extract_many(
     attrs: dict[str, Any],
     conventions: Iterable[ConventionName],
+    *,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> tuple[dict[str, Any], dict[ConventionName, dict[str, Any]]]:
     """Extract multiple conventions from an attributes dict.
 
@@ -185,6 +219,10 @@ def extract_many(
         The attributes dict to extract from.
     conventions
         Convention names to extract.
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
@@ -196,13 +234,16 @@ def extract_many(
     extracted: dict[ConventionName, dict[str, Any]] = {}
     for name in conventions:
         mod = _get_module(name)
-        remaining, data = mod.extract(remaining)
+        rk = _rev_kwargs(mod, revisions, name)
+        remaining, data = mod.extract(remaining, **rk)
         extracted[name] = dict(data)
     return remaining, extracted
 
 
 def validate_all(
     attrs: dict[str, Any],
+    *,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> dict[str, Any]:
     """Validate all detected conventions within an attributes dict.
 
@@ -213,17 +254,23 @@ def validate_all(
     ----------
     attrs
         The attributes dict to validate.
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
     dict[str, Any]
         The input *attrs* (pass-through on success).
     """
-    return validate_many(attrs, _detect_conventions(attrs))
+    return validate_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
 
 def extract_all(
     attrs: dict[str, Any],
+    *,
+    revisions: dict[ConventionName, str] | None = None,
 ) -> tuple[dict[str, Any], dict[ConventionName, dict[str, Any]]]:
     """Extract all detected conventions from an attributes dict.
 
@@ -234,6 +281,10 @@ def extract_all(
     ----------
     attrs
         The attributes dict to extract from.
+    revisions
+        Optional mapping from convention name to revision label. When a
+        convention is listed here and its module supports revisions, that
+        revision is used; otherwise the module's default applies.
 
     Returns
     -------
@@ -241,7 +292,7 @@ def extract_all(
         ``(remaining_attrs, extracted)`` where *extracted* maps
         convention names to their convention data dicts.
     """
-    return extract_many(attrs, _detect_conventions(attrs))
+    return extract_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
 
 __all__ = [
