@@ -88,9 +88,9 @@ Design notes:
   protocol's `self` slot maps to the module), and module-level names match the
   attribute members. This is the mechanism that lets `import`ed modules be
   checked against `ConventionModule`.
-- **`create(self, **kwargs: Any)`\*\* deliberately does not pin named kwargs —
-  conventions differ. It catches "create removed / made positional-only /
-  returns the wrong kind of thing".
+- **`create`** is typed `(self, **kwargs: Any) -> Mapping[str, Any]` and
+  deliberately does not pin named kwargs — conventions differ. It catches
+  "create removed / made positional-only / returns the wrong kind of thing".
 - **`overwrite: bool = ...`** (the literal ellipsis default) pins `overwrite` as
   a keyword argument with a default without asserting the default's value.
 - **Return types `Mapping[str, Any]`.** A `TypedDict` is a `Mapping[str, Any]`,
