@@ -217,9 +217,12 @@ def test_r1_still_accepts_3d() -> None:
 
 
 def test_r2_create_validates_against_vendored_schema() -> None:
-    # The vendored upstream schema pins conventionMetadata schema_url/name to
-    # const v1 values, but the zarr_conventions array uses "contains"
-    # (at-least-one-match), so our single commit-pinned CMO still satisfies it.
+    # This asserts our r2 output conforms to the r2 'spatial:' DATA shape (the
+    # strict-2D field constraints). Note the vendored schema does not actually
+    # constrain our CMO: it pins conventionMetadata fields to const v1 values
+    # that our commit-pinned CMO does not match, but the schema's `attributes`
+    # subschema carries a sibling `$ref` next to its `contains`, so under
+    # draft-07 the convention-metadata check is effectively not enforced here.
     data = spatial_r2.create(
         dimensions=["y", "x"],
         bbox=[0.0, 0.0, 1.0, 1.0],

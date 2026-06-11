@@ -111,9 +111,12 @@ R2_SCHEMA = json.loads(R2_SCHEMA_PATH.read_text())
 
 
 def test_r2_create_validates_against_vendored_schema() -> None:
-    # The vendored upstream schema pins conventionMetadata fields to const v1
-    # values, but the zarr_conventions array uses "contains" (at-least-one-
-    # match), so our single commit-pinned CMO still satisfies it via its UUID.
+    # This asserts our r2 output conforms to the r2 'proj:' DATA shape. Note the
+    # vendored schema does not actually constrain our CMO: it pins
+    # conventionMetadata fields to const v1 values that our commit-pinned CMO
+    # does not match, but the schema's `attributes` subschema carries a sibling
+    # `$ref` next to its `contains`, so under draft-07 the convention-metadata
+    # check is effectively not enforced here.
     data = proj_r2.create(code="EPSG:4326")
     node = wrap_attrs(proj_r2.insert({}, data))
     jsonschema.validate(node, R2_SCHEMA)
