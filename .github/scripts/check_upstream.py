@@ -18,7 +18,7 @@ import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
-from typing import TypedDict
+from typing import Literal, TypedDict
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -36,7 +36,7 @@ TRACKED: dict[str, dict[str, str]] = {
 
 class CheckResult(TypedDict):
     convention: str
-    status: str  # "ok" | "drift" | "error"
+    status: Literal["ok", "drift", "error"]
     message: str
 
 
@@ -74,7 +74,14 @@ def check_convention(name: str, config: dict[str, str]) -> CheckResult:
             message=f"network error fetching {upstream_url!r}: {exc}",
         )
 
-    vendored_schema = load_vendored(vendored_path)
+    try:
+        vendored_schema = load_vendored(vendored_path)
+    except OSError as exc:
+        return CheckResult(
+            convention=name,
+            status="error",
+            message=f"could not read vendored snapshot {vendored_path!r}: {exc}",
+        )
 
     if upstream_schema == vendored_schema:
         return CheckResult(
