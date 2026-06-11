@@ -15,6 +15,9 @@ from zarr_cm.spatial import r2 as spatial_r2
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
 
+R2_SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial-r2.json"
+R2_SCHEMA = json.loads(R2_SCHEMA_PATH.read_text())
+
 
 def test_insert_spatial_2d() -> None:
     data: SpatialAttrs = {"spatial:dimensions": ["y", "x"]}
@@ -211,3 +214,18 @@ def test_r2_schema_url_pinned_to_commit() -> None:
 def test_r1_still_accepts_3d() -> None:
     result = spatial_r1.validate({"spatial:dimensions": ["z", "y", "x"]})
     assert result == {"spatial:dimensions": ["z", "y", "x"]}
+
+
+def test_r2_create_validates_against_vendored_schema() -> None:
+    # The vendored upstream schema pins conventionMetadata schema_url/name to
+    # const v1 values, but the zarr_conventions array uses "contains"
+    # (at-least-one-match), so our single commit-pinned CMO still satisfies it.
+    data = spatial_r2.create(
+        dimensions=["y", "x"],
+        bbox=[0.0, 0.0, 1.0, 1.0],
+        transform=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+        shape=[100, 200],
+        registration="pixel",
+    )
+    node = wrap_attrs(spatial_r2.insert({}, data))
+    jsonschema.validate(node, R2_SCHEMA)
