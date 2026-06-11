@@ -11,37 +11,38 @@ from __future__ import annotations
 import typing
 from typing import Any, Final, cast
 
-from . import _r1
+from . import _r1, _r2
 
 if typing.TYPE_CHECKING:
     import types
-from ._r1 import (
+from ._r2 import (
     CMO as CMO,
 )
-from ._r1 import (
+from ._r2 import (
     CONVENTION_KEYS as CONVENTION_KEYS,
 )
-from ._r1 import (
+from ._r2 import (
     SCHEMA_URL as SCHEMA_URL,
 )
-from ._r1 import (
+from ._r2 import (
     SPEC_URL as SPEC_URL,
 )
-from ._r1 import (
+from ._r2 import (
     UUID as UUID,
 )
-from ._r1 import (
+from ._r2 import (
     GeoProjAttrs as GeoProjAttrs,
 )
-from ._r1 import (
+from ._r2 import (
     GeoProjConventionAttrs as GeoProjConventionAttrs,
 )
 
-_REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1}
-LATEST: Final = "r1"
+_REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1, "r2": _r2}
+LATEST: Final = "r2"
 
-# public per-revision namespace
+# public per-revision namespaces
 r1 = _r1
+r2 = _r2
 
 
 def _revision(label: str) -> Any:
