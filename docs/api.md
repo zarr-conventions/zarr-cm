@@ -25,6 +25,10 @@
 
 ::: zarr_cm.geo_proj
 
+## proj
+
+::: zarr_cm.proj
+
 ## spatial
 
 ::: zarr_cm.spatial

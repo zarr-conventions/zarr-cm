@@ -11,13 +11,13 @@ pip install zarr-cm
 
 ## Supported conventions
 
-| Convention                                                     | Module                | Description                             |
-| -------------------------------------------------------------- | --------------------- | --------------------------------------- |
-| [geo-proj](https://github.com/zarr-experimental/geo-proj)      | `zarr_cm.geo_proj`    | Coordinate reference system information |
-| [spatial](https://github.com/zarr-conventions/spatial)         | `zarr_cm.spatial`     | Spatial coordinate metadata             |
-| [multiscales](https://github.com/zarr-conventions/multiscales) | `zarr_cm.multiscales` | Multiscale pyramid layout               |
-| [license](https://github.com/clbarnes/zarr-convention-license) | `zarr_cm.license`     | License specifiers                      |
-| [uom](https://github.com/clbarnes/zarr-convention-uom)         | `zarr_cm.uom`         | Units of measurement                    |
+| Convention                                                     | Module                                   | Description                             |
+| -------------------------------------------------------------- | ---------------------------------------- | --------------------------------------- |
+| [proj](https://github.com/zarr-conventions/proj)               | `zarr_cm.proj` (also `zarr_cm.geo_proj`) | Coordinate reference system information |
+| [spatial](https://github.com/zarr-conventions/spatial)         | `zarr_cm.spatial`                        | Spatial coordinate metadata             |
+| [multiscales](https://github.com/zarr-conventions/multiscales) | `zarr_cm.multiscales`                    | Multiscale pyramid layout               |
+| [license](https://github.com/clbarnes/zarr-convention-license) | `zarr_cm.license`                        | License specifiers                      |
+| [uom](https://github.com/clbarnes/zarr-convention-uom)         | `zarr_cm.uom`                            | Units of measurement                    |
 
 ## Usage
 
@@ -55,8 +55,8 @@ print(result)
     'zarr_conventions': [
         {
             'uuid': 'f17cb550-5864-4468-aeb7-f3180cfb622f',
-            'schema_url': 'https://raw.githubusercontent.com/zarr-experimental/geo-proj/refs/tags/v1/schema.json',
-            'spec_url': 'https://github.com/zarr-experimental/geo-proj/blob/v1/README.md',
+            'schema_url': 'https://raw.githubusercontent.com/zarr-conventions/proj/d150edbde61b53e9d17520f6d107c9d3689e5910/schema.json',
+            'spec_url': 'https://github.com/zarr-conventions/proj/blob/d150edbde61b53e9d17520f6d107c9d3689e5910/README.md',
             'name': 'proj:',
             'description': 'Coordinate reference system information for geospatial data',
         }
@@ -70,6 +70,30 @@ print(remaining)
 #> {'foo': 'bar'}
 print(extracted)
 #> {'proj:code': 'EPSG:4326'}
+```
+
+<!-- blacken-docs:on -->
+
+### Convention revisions
+
+Conventions evolve. `create`/`insert` default to the latest revision;
+`validate`/`extract` auto-detect the revision from existing metadata. Pass
+`revision=` to target a specific revision:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import spatial
+
+# Writes use the latest revision by default (spatial r2 is strictly 2D)
+latest = spatial.create(dimensions=["y", "x"])
+print(latest)
+#> {'spatial:dimensions': ['y', 'x']}
+
+# Opt into an older revision explicitly to model older data
+old = spatial.create(dimensions=["z", "y", "x"], revision="r1")
+print(old)
+#> {'spatial:dimensions': ['z', 'y', 'x']}
 ```
 
 <!-- blacken-docs:on -->
