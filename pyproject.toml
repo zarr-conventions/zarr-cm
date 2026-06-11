@@ -162,6 +162,7 @@ ignore = [
 "tests/**" = ["T20"]
 "noxfile.py" = ["T20"]
 "docs/examples/**" = ["T20"]
+".github/scripts/**" = ["T20"]
 
 
 [tool.pylint]
