@@ -8,9 +8,13 @@ the latest revision for writes / auto-detect for reads.
 
 from __future__ import annotations
 
-from typing import Any, cast
+import typing
+from typing import Any, Final, cast
 
 from . import _r1
+
+if typing.TYPE_CHECKING:
+    import types
 from ._r1 import (
     CMO as CMO,
 )
@@ -33,8 +37,8 @@ from ._r1 import (
     SpatialConventionAttrs as SpatialConventionAttrs,
 )
 
-_REVISIONS = {"r1": _r1}
-LATEST = "r1"
+_REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1}
+LATEST: Final = "r1"
 
 # public per-revision namespaces
 r1 = _r1
