@@ -17,27 +17,36 @@ from . import _r1, _r2
 
 if typing.TYPE_CHECKING:
     import types
+
+# Re-export the latest revision's public types/constants at package level.
+# Listed in __all__ so they count as explicit re-exports under mypy's
+# --no-implicit-reexport (strict mode) without the ``X as X`` idiom.
 from ._r2 import (
-    CMO as CMO,
+    CMO,
+    CONVENTION_KEYS,
+    SCHEMA_URL,
+    SPEC_URL,
+    UUID,
+    GeoProjAttrs,
+    GeoProjConventionAttrs,
 )
-from ._r2 import (
-    CONVENTION_KEYS as CONVENTION_KEYS,
-)
-from ._r2 import (
-    SCHEMA_URL as SCHEMA_URL,
-)
-from ._r2 import (
-    SPEC_URL as SPEC_URL,
-)
-from ._r2 import (
-    UUID as UUID,
-)
-from ._r2 import (
-    GeoProjAttrs as GeoProjAttrs,
-)
-from ._r2 import (
-    GeoProjConventionAttrs as GeoProjConventionAttrs,
-)
+
+__all__ = [
+    "CMO",
+    "CONVENTION_KEYS",
+    "LATEST",
+    "SCHEMA_URL",
+    "SPEC_URL",
+    "UUID",
+    "GeoProjAttrs",
+    "GeoProjConventionAttrs",
+    "create",
+    "extract",
+    "insert",
+    "r1",
+    "r2",
+    "validate",
+]
 
 _REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1, "r2": _r2}
 LATEST: Final = "r2"

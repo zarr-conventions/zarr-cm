@@ -121,7 +121,9 @@ def _read_rev_kwargs(
         return {}
     if revisions and name in revisions:
         return {"revision": revisions[name]}
-    return {"revision": mod._resolve_read_revision(attrs, None)}
+    # The aggregate layer is a privileged consumer of a revisioned convention's
+    # read-revision resolver; it is internal to the package, not third-party.
+    return {"revision": mod._resolve_read_revision(attrs, None)}  # pylint: disable=protected-access
 
 
 def _detect_conventions(attrs: dict[str, Any]) -> frozenset[ConventionName]:
