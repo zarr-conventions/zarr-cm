@@ -9,6 +9,8 @@ from conftest import wrap_attrs
 
 from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
+from zarr_cm.spatial import r1 as spatial_r1
+from zarr_cm.spatial import r2 as spatial_r2
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -118,12 +120,12 @@ def test_validate_missing_dimensions() -> None:
 
 
 def test_validate_bad_dimensions_length() -> None:
-    with pytest.raises(ValueError, match="2 or 3"):
+    with pytest.raises(ValueError, match="exactly 2"):
         spatial.validate({"spatial:dimensions": ["x"]})
 
 
 def test_validate_bad_bbox_length() -> None:
-    with pytest.raises(ValueError, match="4 or 6"):
+    with pytest.raises(ValueError, match="exactly 4"):
         spatial.validate({"spatial:dimensions": ["y", "x"], "spatial:bbox": [0.0, 1.0]})
 
 
@@ -157,7 +159,7 @@ def test_extract_missing_convention() -> None:
     attrs = {"foo": "bar"}
     remaining, data = spatial.extract(attrs)
     assert remaining == {"foo": "bar"}
-    assert data == {}  # type: ignore[comparison-overlap]
+    assert data == {}
 
 
 def test_insert_collision_raises() -> None:
@@ -172,3 +174,40 @@ def test_insert_idempotent() -> None:
     once = spatial.insert({}, data)
     twice = spatial.insert(once, data, overwrite=True)
     assert once == twice
+
+
+def test_r2_accepts_2d() -> None:
+    result = spatial_r2.validate({"spatial:dimensions": ["y", "x"]})
+    assert result == {"spatial:dimensions": ["y", "x"]}
+
+
+def test_r2_rejects_3d_dimensions() -> None:
+    with pytest.raises(ValueError, match="exactly 2"):
+        spatial_r2.validate({"spatial:dimensions": ["z", "y", "x"]})
+
+
+def test_r2_rejects_6_element_bbox() -> None:
+    with pytest.raises(ValueError, match="exactly 4"):
+        spatial_r2.validate(
+            {
+                "spatial:dimensions": ["y", "x"],
+                "spatial:bbox": [0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            }
+        )
+
+
+def test_r2_rejects_nonpositive_shape_item() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        spatial_r2.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:shape": [0, 10]}
+        )
+
+
+def test_r2_schema_url_pinned_to_commit() -> None:
+    assert "f5c536b9a3386e4127e3d2426dcefeebe6e5bf1a" in spatial_r2.SCHEMA_URL
+    assert "refs/tags/v1" not in spatial_r2.SCHEMA_URL
+
+
+def test_r1_still_accepts_3d() -> None:
+    result = spatial_r1.validate({"spatial:dimensions": ["z", "y", "x"]})
+    assert result == {"spatial:dimensions": ["z", "y", "x"]}
