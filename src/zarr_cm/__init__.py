@@ -34,6 +34,12 @@ from .uom import UCUM, UomAttrs, UomConventionAttrs
 
 ConventionName = Literal["geo-proj", "spatial", "multiscales", "license", "uom"]
 
+GEO_PROJ: Final[ConventionName] = "geo-proj"
+LICENSE: Final[ConventionName] = "license"
+MULTISCALES: Final[ConventionName] = "multiscales"
+SPATIAL: Final[ConventionName] = "spatial"
+UOM: Final[ConventionName] = "uom"
+
 _REGISTRY: Final[dict[ConventionName, types.ModuleType]] = {
     "geo-proj": geo_proj,
     "spatial": spatial,
@@ -247,7 +253,12 @@ def extract_all(
 __all__ = [
     "ALL_CONVENTION_KEYS",
     "CONVENTION_NAMES",
+    "GEO_PROJ",
+    "LICENSE",
+    "MULTISCALES",
+    "SPATIAL",
     "UCUM",
+    "UOM",
     "ConventionAttrs",
     "ConventionMetadataObject",
     "ConventionName",

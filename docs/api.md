@@ -9,6 +9,11 @@
         - CONVENTION_NAMES
         - ALL_CONVENTION_KEYS
         - MultiConventionAttrs
+        - GEO_PROJ
+        - SPATIAL
+        - MULTISCALES
+        - LICENSE
+        - UOM
         - create_many
         - validate_many
         - validate_all
@@ -40,3 +45,24 @@
 ## uom
 
 ::: zarr_cm.uom
+
+## Optional: pydantic models
+
+The `zarr_cm.pydantic` subpackage requires the `pydantic` extra
+(`pip install zarr-cm[pydantic]`).
+
+<!-- prettier-ignore -->
+::: zarr_cm.pydantic
+    options:
+      members:
+        - ConventionModel
+        - GeoProjModel
+        - SpatialModel
+        - MultiscalesModel
+        - LayoutObjectModel
+        - TransformModel
+        - LicenseModel
+        - UomModel
+        - UCUMModel
+        - build_attrs
+        - parse_attrs

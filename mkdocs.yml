@@ -5,6 +5,9 @@ site_author: "Davis Bennett"
 repo_name: "zarr-conventions/zarr-cm"
 repo_url: "https://github.com/zarr-conventions/zarr-cm"
 
+exclude_docs: |
+  superpowers/
+
 theme:
   name: material
   icon:

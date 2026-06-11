@@ -4,7 +4,15 @@ import pytest
 from pytest_examples import CodeExample, EvalExample, find_examples
 
 
-@pytest.mark.parametrize("example", find_examples("docs/", "README.md"), ids=str)
+@pytest.mark.parametrize(
+    "example",
+    [
+        *find_examples("docs/index.md"),
+        *find_examples("docs/api.md"),
+        *find_examples("README.md"),
+    ],
+    ids=str,
+)
 def test_docs_examples(example: CodeExample, eval_example: EvalExample) -> None:
     if eval_example.update_examples:
         eval_example.run_print_update(example)

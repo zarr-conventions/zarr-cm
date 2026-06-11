@@ -107,3 +107,53 @@ print(extracted["geo-proj"])
 ```
 
 <!-- blacken-docs:on -->
+
+## Optional: pydantic models
+
+Install with the `pydantic` extra to get pydantic v2 models with validated
+constructors and IDE-friendly attribute access:
+
+```bash
+pip install zarr-cm[pydantic]
+```
+
+Each modeled convention has a corresponding `<Convention>Model` class. Use
+`build_attrs` and `parse_attrs` to fold one or more models into a single Zarr
+attributes dict and back:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import GEO_PROJ, LICENSE
+from zarr_cm.pydantic import GeoProjModel, LicenseModel, build_attrs, parse_attrs
+
+attrs = build_attrs(
+    GeoProjModel(code="EPSG:4326"),
+    LicenseModel(spdx="MIT"),
+    base={"author": "Alice"},
+)
+print(attrs["proj:code"])
+#> EPSG:4326
+print(attrs["license"])
+#> {'spdx': 'MIT'}
+
+remaining, models = parse_attrs(attrs)
+print(remaining)
+#> {'author': 'Alice'}
+print(models[GEO_PROJ].code)
+#> EPSG:4326
+print(models[LICENSE].spdx)
+#> MIT
+```
+
+<!-- blacken-docs:on -->
+
+The pydantic layer is purely additive; the
+`create`/`insert`/`extract`/`validate` functions on each convention module
+continue to work without pydantic installed.
+
+### Using with `zarr-python`
+
+`build_attrs` produces and `parse_attrs` consumes plain dicts, so they drop
+straight into a Zarr v3 array's `attrs`. Write with
+`arr.attrs.put(build_attrs(...))`; read with `parse_attrs(dict(arr.attrs))`.
