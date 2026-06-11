@@ -40,6 +40,9 @@ SpatialConventionAttrs = TypedDict(
     },
 )
 
+# UUID identifies the convention *family*, not the revision; it is shared with
+# r1. Revisions are distinguished by the commit-pinned SCHEMA_URL below, which
+# is what revision detection on read matches against.
 UUID: Final = "689b58e2-cf7b-45e0-9fff-9cfc0883d6b4"
 _COMMIT: Final = "f5c536b9a3386e4127e3d2426dcefeebe6e5bf1a"
 SCHEMA_URL: Final = (
