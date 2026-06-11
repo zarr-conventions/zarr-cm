@@ -1,0 +1,60 @@
+name: Check upstream schemas
+
+on:
+  schedule:
+    # Run weekly on Mondays at 09:00 UTC
+    - cron: "0 9 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check-schemas:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Check for upstream changes
+        id: check
+        run: |
+          if output=$(python .github/scripts/check_upstream_schemas.py 2>&1); then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "summary<<EOF"
+              echo "$output"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Commit updated snapshots
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/upstream-schemas/
+          git commit -m "chore: update upstream schema snapshots"
+          git push
+
+      - name: Open issue
+        if: steps.check.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUMMARY: ${{ steps.check.outputs.summary }}
+        run: |
+          existing=$(gh issue list --label "upstream-schema-change" --state open --json number --jq 'length')
+          if [ "$existing" -gt 0 ]; then
+            echo "An open issue for upstream schema changes already exists. Skipping."
+            exit 0
+          fi
+          gh issue create \
+            --title "Upstream convention schema change detected" \
+            --body "$SUMMARY" \
+            --label "upstream-schema-change"

@@ -1,0 +1,22 @@
+{
+  "zarr-experimental_geo-proj.json": {
+    "url": "https://raw.githubusercontent.com/zarr-experimental/geo-proj/main/schema.json",
+    "repo": "zarr-experimental/geo-proj"
+  },
+  "zarr-conventions_spatial.json": {
+    "url": "https://raw.githubusercontent.com/zarr-conventions/spatial/main/schema.json",
+    "repo": "zarr-conventions/spatial"
+  },
+  "zarr-conventions_multiscales.json": {
+    "url": "https://raw.githubusercontent.com/zarr-conventions/multiscales/main/schema.json",
+    "repo": "zarr-conventions/multiscales"
+  },
+  "clbarnes_zarr-convention-license.json": {
+    "url": "https://raw.githubusercontent.com/clbarnes/zarr-convention-license/refs/tags/v1/schema.json",
+    "repo": "clbarnes/zarr-convention-license"
+  },
+  "clbarnes_zarr-convention-uom.json": {
+    "url": "https://raw.githubusercontent.com/clbarnes/zarr-convention-uom/refs/tags/v1/schema.json",
+    "repo": "clbarnes/zarr-convention-uom"
+  }
+}
