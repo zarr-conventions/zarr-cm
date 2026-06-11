@@ -1,6 +1,11 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
+import jsonschema
 import pytest
+from conftest import wrap_attrs
 
 from zarr_cm import proj
 from zarr_cm.proj import r1 as proj_r1
@@ -95,3 +100,20 @@ def test_r1_insert_uses_legacy_url() -> None:
         "zarr-experimental" in cmo.get("schema_url", "")
         for cmo in result["zarr_conventions"]
     )
+
+
+# ---------------------------------------------------------------------------
+# Vendored schema fixture test
+# ---------------------------------------------------------------------------
+
+R2_SCHEMA_PATH = Path(__file__).parent / "schemas" / "proj-r2.json"
+R2_SCHEMA = json.loads(R2_SCHEMA_PATH.read_text())
+
+
+def test_r2_create_validates_against_vendored_schema() -> None:
+    # The vendored upstream schema pins conventionMetadata fields to const v1
+    # values, but the zarr_conventions array uses "contains" (at-least-one-
+    # match), so our single commit-pinned CMO still satisfies it via its UUID.
+    data = proj_r2.create(code="EPSG:4326")
+    node = wrap_attrs(proj_r2.insert({}, data))
+    jsonschema.validate(node, R2_SCHEMA)
