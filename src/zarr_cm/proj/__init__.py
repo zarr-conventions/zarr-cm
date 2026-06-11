@@ -11,6 +11,8 @@ from __future__ import annotations
 import typing
 from typing import Any, Final, cast
 
+from zarr_cm._core import detect_revision
+
 from . import _r1, _r2
 
 if typing.TYPE_CHECKING:
@@ -44,6 +46,16 @@ LATEST: Final = "r2"
 r1 = _r1
 r2 = _r2
 
+_SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
+    label: mod.SCHEMA_URL for label, mod in _REVISIONS.items()
+}
+
+
+def _resolve_read_revision(attrs: dict[str, Any], revision: str | None) -> str:
+    if revision is not None:
+        return revision
+    return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
+
 
 def _revision(label: str) -> Any:
     try:
@@ -65,9 +77,9 @@ def insert(
     )
 
 
-def validate(data: dict[str, Any], *, revision: str = LATEST) -> Any:
-    return _revision(revision).validate(data)
+def validate(data: dict[str, Any], *, revision: str | None = None) -> Any:
+    return _revision(_resolve_read_revision(data, revision)).validate(data)
 
 
-def extract(attrs: dict[str, Any], *, revision: str = LATEST) -> Any:
-    return _revision(revision).extract(attrs)
+def extract(attrs: dict[str, Any], *, revision: str | None = None) -> Any:
+    return _revision(_resolve_read_revision(attrs, revision)).extract(attrs)
