@@ -281,3 +281,25 @@ def test_validate_many_revision_override_changes_outcome() -> None:
     validate_many(attrs, ["spatial"], revisions={"spatial": "r1"})  # passes
     with pytest.raises(ValueError, match="exactly 2"):
         validate_many(attrs, ["spatial"], revisions={"spatial": "r2"})
+
+
+def test_validate_all_autodetects_legacy_revision_no_args() -> None:
+    # A legacy r1 doc (3D spatial) must round-trip through validate_all with NO
+    # revisions= argument: detection picks r1 and the same revision is used for
+    # both extract and validate. Regression guard: a naive impl re-detects after
+    # extract strips the CMO, falls back to LATEST (r2), and wrongly rejects 3D.
+    attrs = spatial.insert(
+        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+    )
+    validate_all(attrs)  # must NOT raise
+
+
+def test_validate_all_still_rejects_genuine_r2_violation() -> None:
+    # Negative control: a doc tagged as r2 (latest) but carrying 3D dimensions
+    # must still be rejected under r2's strict-2D rules.
+    bad: dict[str, Any] = {
+        "spatial:dimensions": ["z", "y", "x"],
+        "zarr_conventions": [dict(spatial.r2.CMO)],
+    }
+    with pytest.raises(ValueError, match="exactly 2"):
+        validate_all(bad)

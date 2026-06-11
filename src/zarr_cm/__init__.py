@@ -92,10 +92,36 @@ def _rev_kwargs(
     name: ConventionName,
 ) -> dict[str, str]:
     """Return ``{'revision': label}`` if this module supports revisions and a
-    label was requested for *name*, else an empty dict."""
+    label was requested for *name*, else an empty dict.
+
+    For the WRITE path (``create_many``/``insert_many``) only: there is no
+    document to detect from, so without an explicit override the module's own
+    default (LATEST) applies.
+    """
     if revisions and name in revisions and hasattr(mod, "_REVISIONS"):
         return {"revision": revisions[name]}
     return {}
+
+
+def _read_rev_kwargs(
+    mod: types.ModuleType,
+    revisions: dict[ConventionName, str] | None,
+    name: ConventionName,
+    attrs: dict[str, Any],
+) -> dict[str, str]:
+    """Resolve the revision for a READ over *attrs* and return it as kwargs.
+
+    Like :func:`_rev_kwargs`, but when no explicit override is given and the
+    module supports revisions, the revision is detected ONCE from *attrs* and
+    pinned. This must be threaded to *both* ``extract`` and ``validate`` so a
+    document detected as (say) r1 is not re-detected as LATEST after ``extract``
+    has stripped its ``zarr_conventions`` entry.
+    """
+    if not hasattr(mod, "_REVISIONS"):
+        return {}
+    if revisions and name in revisions:
+        return {"revision": revisions[name]}
+    return {"revision": mod._resolve_read_revision(attrs, None)}
 
 
 def _detect_conventions(attrs: dict[str, Any]) -> frozenset[ConventionName]:
@@ -162,7 +188,7 @@ def validate_many(
     """
     for name in conventions:
         mod = _get_module(name)
-        rk = _rev_kwargs(mod, revisions, name)
+        rk = _read_rev_kwargs(mod, revisions, name, attrs)
         _, extracted = mod.extract(attrs, **rk)
         mod.validate(dict(extracted), **rk)
     return attrs
@@ -234,7 +260,7 @@ def extract_many(
     extracted: dict[ConventionName, dict[str, Any]] = {}
     for name in conventions:
         mod = _get_module(name)
-        rk = _rev_kwargs(mod, revisions, name)
+        rk = _read_rev_kwargs(mod, revisions, name, remaining)
         remaining, data = mod.extract(remaining, **rk)
         extracted[name] = dict(data)
     return remaining, extracted
