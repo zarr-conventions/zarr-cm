@@ -13,8 +13,8 @@ if typing.TYPE_CHECKING:
     import types
     from collections.abc import Iterable
 
-from . import geo_proj, multiscales, proj, spatial, uom
 from . import license as license_
+from . import multiscales, proj, spatial, uom
 from ._core import (
     ConventionAttrs,
     ConventionMetadataObject,
@@ -45,7 +45,7 @@ _REGISTRY: Final[dict[ConventionName, types.ModuleType]] = {
 CONVENTION_NAMES: Final = frozenset(_REGISTRY)
 
 ALL_CONVENTION_KEYS: Final = frozenset(
-    geo_proj.CONVENTION_KEYS
+    proj.CONVENTION_KEYS
     | spatial.CONVENTION_KEYS
     | multiscales.CONVENTION_KEYS
     | license_.CONVENTION_KEYS

@@ -268,3 +268,16 @@ def test_extract_many_revision_override() -> None:
         attrs, ["spatial"], revisions={"spatial": "r1"}
     )
     assert extracted["spatial"] == {"spatial:dimensions": ["y", "x"]}
+
+
+def test_validate_many_revision_override_changes_outcome() -> None:
+    # A 3D spatial doc written under r1: valid under r1, invalid under r2.
+    # The revisions= override must select which revision validate_many uses,
+    # so the same doc passes under r1 and raises under r2. This fails if the
+    # override is silently dropped on the read path.
+    attrs = spatial.insert(
+        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+    )
+    validate_many(attrs, ["spatial"], revisions={"spatial": "r1"})  # passes
+    with pytest.raises(ValueError, match="exactly 2"):
+        validate_many(attrs, ["spatial"], revisions={"spatial": "r2"})
