@@ -98,6 +98,27 @@ def extract_convention(
     return remaining, convention_data
 
 
+def resolve_revision_label(
+    attrs: dict[str, Any],
+    uuid: str,
+    schema_url_by_revision: dict[str, str],
+    convention_name: str,
+) -> str | None:
+    """Return the revision label a document claims for a convention.
+
+    Returns the label whose ``schema_url`` matches the convention's CMO, or
+    ``None`` if the convention's ``uuid`` is present but its ``schema_url`` is
+    unrecognized (an older/newer/foreign revision). Raises ``ValueError`` if the
+    convention is absent (no CMO with *uuid*) -- asking which revision is present
+    for a convention that is not there is a caller error.
+    """
+    present = any(cmo.get("uuid") == uuid for cmo in attrs.get("zarr_conventions", []))
+    if not present:
+        msg = f"convention {convention_name!r} is not present in attrs"
+        raise ValueError(msg)
+    return detect_revision(attrs, uuid, schema_url_by_revision)
+
+
 def detect_revision(
     attrs: dict[str, Any],
     uuid: str,
