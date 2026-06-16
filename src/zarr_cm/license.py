@@ -8,6 +8,7 @@ from zarr_cm._core import (
     ConventionMetadataObject,
     extract_convention,
     insert_convention,
+    resolve_revision_label,
 )
 
 
@@ -43,6 +44,18 @@ CMO: Final[ConventionMetadataObject] = {
 }
 
 CONVENTION_KEYS: Final = {"license"}
+
+_SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
+
+
+def detect(attrs: dict[str, Any]) -> str | None:
+    """Return the revision label this document claims for the license convention.
+
+    License has a single revision (``"v1"``); returns it when present with the
+    known schema_url, ``None`` if present with an unrecognized schema_url, and
+    raises ``ValueError`` if the convention is absent.
+    """
+    return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "license")
 
 
 def create(

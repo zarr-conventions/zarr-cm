@@ -3,7 +3,8 @@ from __future__ import annotations
 import pytest
 
 import zarr_cm
-from zarr_cm import proj, spatial
+from zarr_cm import license as license_
+from zarr_cm import multiscales, proj, spatial, uom
 
 
 def test_spatial_detect_known_revisions() -> None:
@@ -51,3 +52,27 @@ def test_detect_revisions_aggregate() -> None:
 
 def test_detect_revisions_empty() -> None:
     assert zarr_cm.detect_revisions({"foo": "bar"}) == {}
+
+
+def test_flat_detect_present_returns_v1() -> None:
+    ms = multiscales.insert({}, multiscales.create(layout=[{"asset": "0"}]))
+    assert multiscales.detect(ms) == "v1"
+    li = license_.insert({}, license_.create(spdx="MIT"))
+    assert license_.detect(li) == "v1"
+    um = uom.insert({}, uom.create(ucum={"unit": "m"}))
+    assert uom.detect(um) == "v1"
+
+
+def test_flat_detect_unknown_url_returns_none() -> None:
+    doc = {
+        "multiscales": {"layout": [{"asset": "0"}]},
+        "zarr_conventions": [
+            {"uuid": multiscales.UUID, "schema_url": "https://example/other.json"}
+        ],
+    }
+    assert multiscales.detect(doc) is None
+
+
+def test_flat_detect_absent_raises() -> None:
+    with pytest.raises(ValueError, match="multiscales"):
+        multiscales.detect({"foo": "bar"})
