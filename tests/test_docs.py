@@ -8,7 +8,7 @@ from pytest_examples import CodeExample, EvalExample, find_examples
 # than recursing all of docs/ (which may hold docs whose ``python`` fences are
 # illustrative, not runnable). Add new runnable doc files here explicitly.
 @pytest.mark.parametrize(
-    "example", find_examples("docs/index.md", "README.md"), ids=str
+    "example", list(find_examples("docs/index.md", "README.md")), ids=str
 )
 def test_docs_examples(example: CodeExample, eval_example: EvalExample) -> None:
     if eval_example.update_examples:
