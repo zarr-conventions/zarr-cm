@@ -34,7 +34,7 @@ def workflow_read_unknown() -> None:
 
 
 def workflow_migrate() -> None:
-    """3. Migrate proj data r1 -> r2 (same fields; URLs/regex differ)."""
+    """3. Migrate proj data r1 -> latest (same fields; URLs + relaxed rules)."""
     old_doc = proj.insert(
         {}, proj.create(code="EPSG:4326", revision="r1"), revision="r1"
     )
@@ -47,6 +47,11 @@ def workflow_migrate() -> None:
     print(f"    schema_url before: {before}")
     print(f"    schema_url after:  {after}")
     assert "zarr-conventions/proj" in after[0]
+
+    # The latest revision also relaxed the proj:code pattern: a lowercase
+    # authority that the older r2 pattern (^[A-Z]+:[0-9]+$) rejected is accepted.
+    relaxed = proj.insert({}, proj.create(code="epsg:4326"))
+    print(f"    latest accepts relaxed code: {proj.extract(relaxed)[1]['proj:code']}")
 
 
 if __name__ == "__main__":
