@@ -46,13 +46,21 @@ class MultiscalesConventionAttrs(TypedDict):
 
 
 # UUID identifies the convention *family*, not the revision; it is shared with
-# r1. Revisions are distinguished by the commit-pinned SCHEMA_URL below, which
-# is what revision detection on read matches against.
+# r1. Revisions are distinguished by the SCHEMA_URL below, which is what
+# revision detection on read matches against.
+#
+# Unlike spatial/proj, the multiscales v0.1 schema ENFORCES schema_url as a
+# `const` equal to the refs/tags/v0.1 tag URL (its conventionMetadata has no
+# escape hatch), so a document we emit must carry that exact tag URL to validate
+# against the official schema. We therefore pin to the tag here rather than the
+# commit SHA. The snapshot is still taken at commit _COMMIT (vendored under that
+# name); _TAG is the published tag at that commit.
 UUID: Final = "d35379db-88df-4056-af3a-620245f8e347"
 _COMMIT: Final = "9b78efa75fef0fed302d9cf880037c569354d860"
-SCHEMA_URL: Final = f"https://raw.githubusercontent.com/zarr-conventions/multiscales/{_COMMIT}/schema.json"
+_TAG: Final = "v0.1"
+SCHEMA_URL: Final = f"https://raw.githubusercontent.com/zarr-conventions/multiscales/refs/tags/{_TAG}/schema.json"
 SPEC_URL: Final = (
-    f"https://github.com/zarr-conventions/multiscales/blob/{_COMMIT}/README.md"
+    f"https://github.com/zarr-conventions/multiscales/blob/{_TAG}/README.md"
 )
 
 CMO: Final[ConventionMetadataObject] = {
