@@ -9,6 +9,8 @@ from conftest import wrap_attrs
 
 from zarr_cm import multiscales
 from zarr_cm.multiscales import CMO, MultiscalesAttrs
+from zarr_cm.multiscales import r1 as multiscales_r1
+from zarr_cm.multiscales import r2 as multiscales_r2
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "multiscales.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -90,11 +92,33 @@ def test_roundtrip() -> None:
     assert extracted == data
 
 
+R2_SCHEMA_PATH = Path(__file__).parent / "schemas" / "multiscales-r2.json"
+R2_SCHEMA = json.loads(R2_SCHEMA_PATH.read_text())
+
+# The vendored v0.1 schema pins conventionMetadata's schema_url/spec_url to the
+# `refs/tags/v0.1` release URLs via `const`, and (unlike the spatial schema) its
+# `attributes` subschema has no sibling `$ref`, so the `zarr_conventions` ->
+# conventionMetadata check IS enforced. Our r2 CMO deliberately commit-pins those
+# URLs (so detection round-trips), so it does not match the tag-pinned const.
+# These schema-conformance tests target the multiscales DATA shape, so we swap in
+# the tag-form CMO the schema expects; the commit-pinned form is asserted by
+# test_r2_schema_url_pinned_to_v0_1 below.
+_R2_TAG_CMO = {
+    **CMO,
+    "schema_url": "https://raw.githubusercontent.com/zarr-conventions/multiscales/refs/tags/v0.1/schema.json",
+    "spec_url": "https://github.com/zarr-conventions/multiscales/blob/v0.1/README.md",
+}
+
+
+def _with_tag_cmo(result: dict[str, object]) -> dict[str, object]:
+    return {**result, "zarr_conventions": [_R2_TAG_CMO]}
+
+
 def test_schema_validation_minimal() -> None:
     data: MultiscalesAttrs = {"layout": [{"asset": "0"}]}
     result = multiscales.insert({}, data)
-    node = wrap_attrs(result, node_type="group")
-    jsonschema.validate(node, SCHEMA)
+    node = wrap_attrs(_with_tag_cmo(result), node_type="group")
+    jsonschema.validate(node, R2_SCHEMA)
 
 
 def test_schema_validation_full() -> None:
@@ -116,8 +140,8 @@ def test_schema_validation_full() -> None:
         "resampling_method": "bilinear",
     }
     result = multiscales.insert({}, data)
-    node = wrap_attrs(result, node_type="group")
-    jsonschema.validate(node, SCHEMA)
+    node = wrap_attrs(_with_tag_cmo(result), node_type="group")
+    jsonschema.validate(node, R2_SCHEMA)
 
 
 def test_validate_valid() -> None:
@@ -176,3 +200,32 @@ def test_insert_idempotent() -> None:
     once = multiscales.insert({}, data)
     twice = multiscales.insert(once, data, overwrite=True)
     assert once == twice
+
+
+def test_r2_schema_url_pinned_to_v0_1() -> None:
+    assert "9b78efa75fef0fed302d9cf880037c569354d860" in multiscales_r2.SCHEMA_URL
+    assert "refs/tags/v1" not in multiscales_r2.SCHEMA_URL
+
+
+def test_r1_keeps_legacy_url() -> None:
+    assert "refs/tags/v1" in multiscales_r1.SCHEMA_URL
+
+
+def test_r2_create_validates_against_vendored_schema() -> None:
+    # Asserts our r2 output conforms to the v0.1 multiscales DATA shape. The
+    # vendored schema enforces conventionMetadata's tag-pinned const, which our
+    # commit-pinned CMO does not match, so we swap in the tag-form CMO (see
+    # _with_tag_cmo); the commit-pinned form is covered by
+    # test_r2_schema_url_pinned_to_v0_1.
+    data = multiscales.create(layout=[{"asset": "0"}])
+    node = wrap_attrs(_with_tag_cmo(multiscales.insert({}, data)), node_type="group")
+    jsonschema.validate(node, R2_SCHEMA)
+
+
+def test_multiscales_revision_roundtrip() -> None:
+    r1_doc = multiscales.insert(
+        {}, multiscales.create(layout=[{"asset": "0"}], revision="r1"), revision="r1"
+    )
+    assert multiscales.detect(r1_doc) == "r1"
+    _, data = multiscales.extract(r1_doc, revision="r1")
+    assert data["layout"] == [{"asset": "0"}]

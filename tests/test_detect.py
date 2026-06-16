@@ -55,17 +55,35 @@ def test_detect_revisions_aggregate() -> None:
     attrs = proj.insert(
         attrs, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
     )
+    attrs = multiscales.insert(attrs, multiscales.create(layout=[{"asset": "0"}]))
     result = zarr_cm.detect_revisions(attrs)
-    assert result == {"spatial": "r1", "geo-proj": "r2"}
+    assert result == {"spatial": "r1", "geo-proj": "r2", "multiscales": "r2"}
 
 
 def test_detect_revisions_empty() -> None:
     assert zarr_cm.detect_revisions({"foo": "bar"}) == {}
 
 
-def test_flat_detect_present_returns_v1() -> None:
+def test_multiscales_detect_latest_returns_r2() -> None:
     ms = multiscales.insert({}, multiscales.create(layout=[{"asset": "0"}]))
-    assert multiscales.detect(ms) == "v1"
+    assert multiscales.detect(ms) == "r2"
+
+
+def test_multiscales_detect_unknown_url_returns_none() -> None:
+    other = "https://example/other.json"
+    ms = {
+        "multiscales": {"layout": [{"asset": "0"}]},
+        "zarr_conventions": [{"uuid": multiscales.UUID, "schema_url": other}],
+    }
+    assert multiscales.detect(ms) is None
+
+
+def test_multiscales_detect_absent_raises() -> None:
+    with pytest.raises(ValueError, match="multiscales"):
+        multiscales.detect({"foo": "bar"})
+
+
+def test_flat_detect_present_returns_v1() -> None:
     li = license_.insert({}, license_.create(spdx="MIT"))
     assert license_.detect(li) == "v1"
     um = uom.insert({}, uom.create(ucum={"unit": "m"}))
@@ -74,11 +92,6 @@ def test_flat_detect_present_returns_v1() -> None:
 
 def test_flat_detect_unknown_url_returns_none() -> None:
     other = "https://example/other.json"
-    ms = {
-        "multiscales": {"layout": [{"asset": "0"}]},
-        "zarr_conventions": [{"uuid": multiscales.UUID, "schema_url": other}],
-    }
-    assert multiscales.detect(ms) is None
     li = {
         "license": {"spdx": "MIT"},
         "zarr_conventions": [{"uuid": license_.UUID, "schema_url": other}],
@@ -92,5 +105,5 @@ def test_flat_detect_unknown_url_returns_none() -> None:
 
 
 def test_flat_detect_absent_raises() -> None:
-    with pytest.raises(ValueError, match="multiscales"):
-        multiscales.detect({"foo": "bar"})
+    with pytest.raises(ValueError, match="license"):
+        license_.detect({"foo": "bar"})
