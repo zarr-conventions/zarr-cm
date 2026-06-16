@@ -11,6 +11,7 @@ from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
 from zarr_cm.spatial import r1 as spatial_r1
 from zarr_cm.spatial import r2 as spatial_r2
+from zarr_cm.spatial import r3 as spatial_r3
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
@@ -232,3 +233,25 @@ def test_r2_create_validates_against_vendored_schema() -> None:
     )
     node = wrap_attrs(spatial_r2.insert({}, data))
     jsonschema.validate(node, R2_SCHEMA)
+
+
+def test_r3_schema_url_pinned_to_v0_1() -> None:
+    assert "54d81b7ced0376e63ee10f34db31db7d08dcc28d" in spatial_r3.SCHEMA_URL
+    assert "refs/tags/v1" not in spatial_r3.SCHEMA_URL
+    assert "refs/tags/v0.1" not in spatial_r3.SCHEMA_URL  # we pin to the commit SHA
+
+
+def test_r3_same_shape_as_r2() -> None:
+    assert spatial_r3.validate({"spatial:dimensions": ["y", "x"]}) == {
+        "spatial:dimensions": ["y", "x"]
+    }
+    with pytest.raises(ValueError, match="exactly 2"):
+        spatial_r3.validate({"spatial:dimensions": ["z", "y", "x"]})
+
+
+def test_spatial_latest_is_r3() -> None:
+    assert spatial.LATEST == "r3"
+    assert (
+        spatial.detect(spatial.insert({}, spatial.create(dimensions=["y", "x"])))
+        == "r3"
+    )
