@@ -32,3 +32,8 @@ def test_raises_when_convention_absent() -> None:
         resolve_revision_label({"zarr_conventions": []}, UUID, URLS, "demo")
     with pytest.raises(ValueError, match="demo"):
         resolve_revision_label({}, UUID, URLS, "demo")
+
+
+def test_returns_none_when_cmo_has_no_schema_url() -> None:
+    # Present by UUID but the CMO carries no schema_url at all -> unrecognized.
+    assert resolve_revision_label(_attrs(None), UUID, URLS, "demo") is None

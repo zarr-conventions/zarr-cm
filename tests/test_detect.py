@@ -41,6 +41,11 @@ def test_proj_detect_known_revisions() -> None:
     assert proj.detect(r2) == "r2"
 
 
+def test_proj_detect_absent_raises() -> None:
+    with pytest.raises(ValueError, match="geo-proj"):
+        proj.detect({"foo": "bar"})
+
+
 def test_detect_revisions_aggregate() -> None:
     attrs = spatial.insert(
         {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
@@ -64,13 +69,22 @@ def test_flat_detect_present_returns_v1() -> None:
 
 
 def test_flat_detect_unknown_url_returns_none() -> None:
-    doc = {
+    other = "https://example/other.json"
+    ms = {
         "multiscales": {"layout": [{"asset": "0"}]},
-        "zarr_conventions": [
-            {"uuid": multiscales.UUID, "schema_url": "https://example/other.json"}
-        ],
+        "zarr_conventions": [{"uuid": multiscales.UUID, "schema_url": other}],
     }
-    assert multiscales.detect(doc) is None
+    assert multiscales.detect(ms) is None
+    li = {
+        "license": {"spdx": "MIT"},
+        "zarr_conventions": [{"uuid": license_.UUID, "schema_url": other}],
+    }
+    assert license_.detect(li) is None
+    um = {
+        "uom": {"ucum": {"unit": "m"}},
+        "zarr_conventions": [{"uuid": uom.UUID, "schema_url": other}],
+    }
+    assert uom.detect(um) is None
 
 
 def test_flat_detect_absent_raises() -> None:
