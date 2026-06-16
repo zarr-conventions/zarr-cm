@@ -133,13 +133,13 @@ def test_proj_resolves_r1_from_r1_url() -> None:
 
 def test_proj_resolves_r2_from_r2_url() -> None:
     """_resolve_read_revision picks "r2" when the stored schema_url is proj r2's URL."""
-    data = proj.create(code="EPSG:4326")  # default LATEST = r2
-    attrs = proj.insert({}, data)
+    data = proj.create(code="EPSG:4326", revision="r2")
+    attrs = proj.insert({}, data, revision="r2")
     assert proj._resolve_read_revision(attrs, None) == "r2"
 
 
 def test_proj_unknown_url_falls_back_to_latest() -> None:
-    """A schema_url that matches no known proj revision falls back to LATEST (r2)."""
+    """A schema_url that matches no known proj revision falls back to LATEST (r3)."""
     fabricated_url = (
         "https://raw.githubusercontent.com/zarr-conventions/proj"
         "/0000000000000000000000000000000000000000/schema.json"
@@ -154,7 +154,7 @@ def test_proj_unknown_url_falls_back_to_latest() -> None:
         ],
     }
     resolved = proj._resolve_read_revision(attrs, None)
-    assert resolved == proj.LATEST  # == "r2"
+    assert resolved == proj.LATEST  # == "r3"
     # Confirm it differs from what a genuine r1 URL would resolve to.
     r1_attrs = proj.insert(
         {}, proj.create(code="EPSG:4326", revision="r1"), revision="r1"

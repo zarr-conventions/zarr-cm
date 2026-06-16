@@ -38,7 +38,7 @@ def test_spatial_detect_absent_raises() -> None:
 
 def test_proj_detect_known_revisions() -> None:
     r1 = proj.insert({}, proj.create(code="EPSG:4326", revision="r1"), revision="r1")
-    r2 = proj.insert({}, proj.create(code="EPSG:4326"))
+    r2 = proj.insert({}, proj.create(code="EPSG:4326", revision="r2"), revision="r2")
     assert proj.detect(r1) == "r1"
     assert proj.detect(r2) == "r2"
 
@@ -52,7 +52,9 @@ def test_detect_revisions_aggregate() -> None:
     attrs = spatial.insert(
         {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
     )
-    attrs = proj.insert(attrs, proj.create(code="EPSG:4326"))  # r2
+    attrs = proj.insert(
+        attrs, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
+    )
     result = zarr_cm.detect_revisions(attrs)
     assert result == {"spatial": "r1", "geo-proj": "r2"}
 

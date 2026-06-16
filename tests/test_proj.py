@@ -10,6 +10,7 @@ from conftest import wrap_attrs
 from zarr_cm import proj
 from zarr_cm.proj import r1 as proj_r1
 from zarr_cm.proj import r2 as proj_r2
+from zarr_cm.proj import r3 as proj_r3
 
 
 def test_r2_accepts_valid_code() -> None:
@@ -45,7 +46,7 @@ def test_r2_cmo_uses_corrected_url() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Package-level API (dispatches to LATEST = r2) and per-revision round-trips
+# Package-level API (dispatches to LATEST = r3) and per-revision round-trips
 # ---------------------------------------------------------------------------
 
 
@@ -60,7 +61,8 @@ def test_create_wkt2() -> None:
 
 
 def test_create_rejects_zero_keys() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
+    # Default facade is LATEST = r3, whose anyOf rule requires at least one key.
+    with pytest.raises(ValueError, match="At least one"):
         proj.create()
 
 
@@ -73,7 +75,7 @@ def test_insert_and_extract_roundtrip() -> None:
     data = proj.create(code="EPSG:4326")
     inserted = proj.insert({"foo": "bar"}, data)
     assert inserted["proj:code"] == "EPSG:4326"
-    assert proj_r2.CMO in inserted["zarr_conventions"]
+    assert proj_r3.CMO in inserted["zarr_conventions"]
     remaining, extracted = proj.extract(inserted)
     assert extracted == data
     assert remaining == {"foo": "bar"}
@@ -100,6 +102,40 @@ def test_r1_insert_uses_legacy_url() -> None:
         "zarr-experimental" in cmo.get("schema_url", "")
         for cmo in result["zarr_conventions"]
     )
+
+
+# ---------------------------------------------------------------------------
+# r3 (v0.1): relaxed proj:code pattern + anyOf CRS rule
+# ---------------------------------------------------------------------------
+
+
+def test_r3_accepts_relaxed_code() -> None:
+    # r3's pattern is ^[^:]+:[^:]+$ (matches upstream v0.1), which accepts a
+    # lowercase authority that r2's stricter ^[A-Z]+:[0-9]+$ rejects.
+    assert proj_r3.validate({"proj:code": "epsg:4326"}) == {"proj:code": "epsg:4326"}
+    with pytest.raises(ValueError, match="proj:code"):
+        proj_r2.validate({"proj:code": "epsg:4326"})
+
+
+def test_r3_allows_multiple_crs_keys() -> None:
+    result = proj_r3.validate({"proj:code": "EPSG:4326", "proj:wkt2": "GEOGCS[...]"})
+    assert result == {"proj:code": "EPSG:4326", "proj:wkt2": "GEOGCS[...]"}
+    with pytest.raises(ValueError, match="Exactly one"):
+        proj_r2.validate({"proj:code": "EPSG:4326", "proj:wkt2": "GEOGCS[...]"})
+
+
+def test_r3_rejects_zero_keys() -> None:
+    with pytest.raises(ValueError, match="At least one"):
+        proj_r3.validate({})
+
+
+def test_r3_schema_url_pinned_to_v0_1() -> None:
+    assert "5ca5b2f92e5c7245f957d9128b289ee535f0720d" in proj_r3.SCHEMA_URL
+    assert "refs/tags/v1" not in proj_r3.SCHEMA_URL
+
+
+def test_proj_latest_is_r3() -> None:
+    assert proj.LATEST == "r3"
 
 
 # ---------------------------------------------------------------------------

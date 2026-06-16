@@ -13,7 +13,7 @@ from typing import Any, Final, cast
 
 from zarr_cm._core import detect_revision, resolve_revision_label
 
-from . import _r1, _r2
+from . import _r1, _r2, _r3
 
 if typing.TYPE_CHECKING:
     import types
@@ -21,7 +21,7 @@ if typing.TYPE_CHECKING:
 # Re-export the latest revision's public types/constants at package level.
 # Listed in __all__ so they count as explicit re-exports under mypy's
 # --no-implicit-reexport (strict mode) without the ``X as X`` idiom.
-from ._r2 import (
+from ._r3 import (
     CMO,
     CONVENTION_KEYS,
     SCHEMA_URL,
@@ -46,15 +46,17 @@ __all__ = [
     "insert",
     "r1",
     "r2",
+    "r3",
     "validate",
 ]
 
-_REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1, "r2": _r2}
-LATEST: Final = "r2"
+_REVISIONS: Final[dict[str, types.ModuleType]] = {"r1": _r1, "r2": _r2, "r3": _r3}
+LATEST: Final = "r3"
 
 # public per-revision namespaces
 r1 = _r1
 r2 = _r2
+r3 = _r3
 
 _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
     label: mod.SCHEMA_URL for label, mod in _REVISIONS.items()

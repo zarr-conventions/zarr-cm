@@ -91,7 +91,8 @@ def test_create_many_invalid_name() -> None:
 
 
 def test_create_many_invalid_data() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
+    # geo-proj resolves to the latest proj revision (r3, anyOf): empty data fails.
+    with pytest.raises(ValueError, match="At least one"):
         create_many({"geo-proj": {}})
 
 
