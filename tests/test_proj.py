@@ -156,3 +156,13 @@ def test_r2_create_validates_against_vendored_schema() -> None:
     data = proj_r2.create(code="EPSG:4326")
     node = wrap_attrs(proj_r2.insert({}, data))
     jsonschema.validate(node, R2_SCHEMA)
+
+
+R3_SCHEMA_PATH = Path(__file__).parent / "schemas" / "proj-r3.json"
+R3_SCHEMA = json.loads(R3_SCHEMA_PATH.read_text())
+
+
+def test_r3_create_validates_against_vendored_schema() -> None:
+    data = proj_r3.create(code="EPSG:4326")
+    node = wrap_attrs(proj_r3.insert({}, data))
+    jsonschema.validate(node, R3_SCHEMA)
