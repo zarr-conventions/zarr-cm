@@ -11,7 +11,7 @@ from __future__ import annotations
 import typing
 from typing import Any, Final, cast
 
-from zarr_cm._core import detect_revision
+from zarr_cm._core import detect_revision, resolve_revision_label
 
 from . import _r1, _r2
 
@@ -41,6 +41,7 @@ __all__ = [
     "SpatialAttrs",
     "SpatialConventionAttrs",
     "create",
+    "detect",
     "extract",
     "insert",
     "r1",
@@ -64,6 +65,16 @@ def _resolve_read_revision(attrs: dict[str, Any], revision: str | None) -> str:
     if revision is not None:
         return revision
     return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
+
+
+def detect(attrs: dict[str, Any]) -> str | None:
+    """Return the revision label this document claims for the spatial convention.
+
+    Returns the label (e.g. ``"r1"``/``"r2"``), or ``None`` if the convention is
+    present but at an unrecognized revision. Raises ``ValueError`` if the spatial
+    convention is absent from *attrs*.
+    """
+    return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "spatial")
 
 
 def _revision(label: str) -> Any:

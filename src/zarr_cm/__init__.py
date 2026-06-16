@@ -323,6 +323,22 @@ def extract_all(
     return extract_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
 
+def detect_revisions(
+    attrs: dict[str, Any],
+) -> dict[ConventionName, str | None]:
+    """Map each present convention to the revision label it claims.
+
+    Detects which conventions are present (by UUID) and returns a mapping from
+    each present convention's display name to its claimed revision label, or
+    ``None`` if present at an unrecognized revision. Absent conventions are not
+    included.
+    """
+    result: dict[ConventionName, str | None] = {}
+    for name in _detect_conventions(attrs):
+        result[name] = _get_module(name).detect(attrs)
+    return result
+
+
 __all__ = [
     "ALL_CONVENTION_KEYS",
     "CONVENTION_NAMES",
@@ -345,6 +361,7 @@ __all__ = [
     "UomConventionAttrs",
     "__version__",
     "create_many",
+    "detect_revisions",
     "extract_all",
     "extract_many",
     "insert_many",
