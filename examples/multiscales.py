@@ -32,7 +32,7 @@ def workflow_read_unknown() -> None:
     else:
         _, data = multiscales.extract(doc)
         multiscales.validate(dict(data))
-        print(f"[read] validated under {rev!r}")
+        print(f"[read] validated under {rev!r}: {dict(data)}")
 
 
 def workflow_migrate() -> None:

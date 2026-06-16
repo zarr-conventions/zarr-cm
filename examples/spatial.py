@@ -31,6 +31,8 @@ def workflow_read_unknown() -> None:
     rev = spatial.detect(old_doc)
     print(f"[read] detected revision {rev!r} for the stored document")
     if rev is None:
+        # Unknown revision: extract with no revision (best-effort raw fields).
+        # Do NOT assume the latest revision validates this data.
         _, data = spatial.extract(old_doc)
         print(f"[read] unknown revision; extracted raw fields only: {dict(data)}")
     else:
