@@ -105,15 +105,15 @@ def test_spatial_validate_autodetects_r1() -> None:
     spatial.validate(dict(extracted), revision="r1")  # r1 allows 3D
 
 
-def test_spatial_extract_detects_r2() -> None:
-    data = spatial.create(dimensions=["y", "x"])  # default latest = r2
+def test_spatial_extract_detects_latest() -> None:
+    data = spatial.create(dimensions=["y", "x"])  # default = latest revision
     attrs = spatial.insert({}, data)
     _remaining, extracted = spatial.extract(attrs)
     assert extracted == data
 
 
 def test_extract_revision_override_wins() -> None:
-    # r2 doc but force-read as r1 via explicit revision.
+    # latest-revision doc but force-read as r1 via explicit revision.
     attrs = spatial.insert({}, spatial.create(dimensions=["y", "x"]))
     _remaining, extracted = spatial.extract(attrs, revision="r1")
     assert extracted == {"spatial:dimensions": ["y", "x"]}
