@@ -18,13 +18,13 @@ def test_detect_resolves_r1_from_r1_url() -> None:
 
 def test_detect_resolves_r2_from_r2_url() -> None:
     """_resolve_read_revision picks "r2" when the stored schema_url is r2's URL."""
-    data = spatial.create(dimensions=["y", "x"])  # default LATEST = r2
-    attrs = spatial.insert({}, data)
+    data = spatial.create(dimensions=["y", "x"], revision="r2")
+    attrs = spatial.insert({}, data, revision="r2")
     assert spatial._resolve_read_revision(attrs, None) == "r2"
 
 
 def test_unknown_url_falls_back_to_latest() -> None:
-    """A schema_url that matches no known revision falls back to LATEST (r2).
+    """A schema_url that matches no known revision falls back to LATEST.
 
     This is NOT the same as r1's URL (refs/tags/v1) — it is a fabricated
     commit-pinned URL that will never match any entry in _SCHEMA_URL_BY_REVISION.
@@ -43,7 +43,7 @@ def test_unknown_url_falls_back_to_latest() -> None:
         ],
     }
     resolved = spatial._resolve_read_revision(attrs, None)
-    assert resolved == spatial.LATEST  # == "r2"
+    assert resolved == spatial.LATEST
     # Confirm it differs from what a genuine r1 URL would resolve to.
     r1_attrs = spatial.insert(
         {}, spatial.create(dimensions=["y", "x"], revision="r1"), revision="r1"
@@ -54,9 +54,9 @@ def test_unknown_url_falls_back_to_latest() -> None:
 
 def test_explicit_revision_overrides_detection() -> None:
     """An explicit revision= argument wins over the schema_url in the attrs."""
-    data = spatial.create(dimensions=["y", "x"])  # r2 doc
+    data = spatial.create(dimensions=["y", "x"])  # latest-revision doc
     attrs = spatial.insert({}, data)
-    # attrs contains an r2 schema_url, but we force r1
+    # attrs contains the latest revision's schema_url, but we force r1
     assert spatial._resolve_read_revision(attrs, "r1") == "r1"
 
 
@@ -67,8 +67,8 @@ def test_validate_observably_differs_by_detected_revision() -> None:
     the revision argument (and by extension detection) actually controls dispatch.
 
     Note: bare validate() on the extracted dict (no zarr_conventions) falls back
-    to LATEST=r2, which correctly rejects 3D data; caller must pass revision="r1"
-    explicitly when the CMO is absent.
+    to LATEST (strict 2D), which correctly rejects 3D data; caller must pass
+    revision="r1" explicitly when the CMO is absent.
     """
     data = spatial.create(dimensions=["z", "y", "x"], revision="r1")
     attrs = spatial.insert({}, data, revision="r1")

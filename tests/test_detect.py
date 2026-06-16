@@ -11,7 +11,9 @@ def test_spatial_detect_known_revisions() -> None:
     r1 = spatial.insert(
         {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
     )
-    r2 = spatial.insert({}, spatial.create(dimensions=["y", "x"]))  # latest = r2
+    r2 = spatial.insert(
+        {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
+    )
     assert spatial.detect(r1) == "r1"
     assert spatial.detect(r2) == "r2"
 
