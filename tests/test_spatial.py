@@ -255,3 +255,22 @@ def test_spatial_latest_is_r3() -> None:
         spatial.detect(spatial.insert({}, spatial.create(dimensions=["y", "x"])))
         == "r3"
     )
+
+
+R3_SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial-r3.json"
+R3_SCHEMA = json.loads(R3_SCHEMA_PATH.read_text())
+
+
+def test_r3_create_validates_against_vendored_schema() -> None:
+    # As with the r2 fixture test: the vendored v0.1 schema does not actually
+    # constrain our commit-pinned CMO (contains/$ref); this asserts the spatial:
+    # DATA shape, which is unchanged at v0.1.
+    data = spatial_r3.create(
+        dimensions=["y", "x"],
+        bbox=[0.0, 0.0, 1.0, 1.0],
+        transform=[1.0, 0.0, 0.0, 0.0, 1.0, 0.0],
+        shape=[100, 200],
+        registration="pixel",
+    )
+    node = wrap_attrs(spatial_r3.insert({}, data))
+    jsonschema.validate(node, R3_SCHEMA)
