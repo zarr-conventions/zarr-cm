@@ -25,11 +25,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TRACKED: dict[str, dict[str, str]] = {
     "spatial": {
         "upstream": "https://raw.githubusercontent.com/zarr-conventions/spatial/main/schema.json",
-        "vendored": ".github/upstream-schemas/spatial/f5c536b9a3386e4127e3d2426dcefeebe6e5bf1a.json",
+        "vendored": ".github/upstream-schemas/spatial/54d81b7ced0376e63ee10f34db31db7d08dcc28d.json",
     },
     "proj": {
         "upstream": "https://raw.githubusercontent.com/zarr-conventions/proj/main/schema.json",
-        "vendored": ".github/upstream-schemas/proj/d150edbde61b53e9d17520f6d107c9d3689e5910.json",
+        "vendored": ".github/upstream-schemas/proj/5ca5b2f92e5c7245f957d9128b289ee535f0720d.json",
+    },
+    "multiscales": {
+        "upstream": "https://raw.githubusercontent.com/zarr-conventions/multiscales/main/schema.json",
+        "vendored": ".github/upstream-schemas/multiscales/9b78efa75fef0fed302d9cf880037c569354d860.json",
     },
 }
 
