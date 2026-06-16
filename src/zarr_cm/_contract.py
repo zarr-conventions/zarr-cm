@@ -52,8 +52,9 @@ class ConventionModule(Protocol):
 
 if TYPE_CHECKING:
     from . import license as _license
-    from . import multiscales as _multiscales
     from . import uom as _uom
+    from .multiscales import _r1 as _multiscales_r1
+    from .multiscales import _r2 as _multiscales_r2
     from .proj import _r1 as _proj_r1
     from .proj import _r2 as _proj_r2
     from .spatial import _r1 as _spatial_r1
@@ -66,6 +67,7 @@ if TYPE_CHECKING:
     _check_spatial_r2: ConventionModule = _spatial_r2
     _check_proj_r1: ConventionModule = _proj_r1
     _check_proj_r2: ConventionModule = _proj_r2
-    _check_multiscales: ConventionModule = _multiscales
+    _check_multiscales_r1: ConventionModule = _multiscales_r1
+    _check_multiscales_r2: ConventionModule = _multiscales_r2
     _check_license: ConventionModule = _license
     _check_uom: ConventionModule = _uom
