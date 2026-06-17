@@ -40,7 +40,9 @@ Changelog = "https://github.com/zarr-conventions/zarr-cm/releases"
 
 [dependency-groups]
 test = [
-  "pytest >=9",
+  # Pinned to the 9.0.x series: pytest 9.1 has a regression that breaks
+  # collection of parametrize-over-generator (see test_docs.py / find_examples).
+  "pytest >=9,<9.1",
   "pytest-cov >=7",
   "pytest-examples >=0.0.14",
   "jsonschema >=4",
@@ -162,6 +164,8 @@ ignore = [
 "tests/**" = ["T20"]
 "noxfile.py" = ["T20"]
 "docs/examples/**" = ["T20"]
+"examples/**" = ["T20"]
+".github/scripts/**" = ["T20"]
 
 
 [tool.pylint]

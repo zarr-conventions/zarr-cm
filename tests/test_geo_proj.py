@@ -104,13 +104,15 @@ def test_validate_valid() -> None:
 
 
 def test_validate_empty() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
+    # geo_proj aliases the latest proj revision (r3, anyOf): zero keys still fails.
+    with pytest.raises(ValueError, match="At least one"):
         geo_proj.validate({})
 
 
 def test_validate_multiple() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
-        geo_proj.validate({"proj:code": "EPSG:4326", "proj:wkt2": "..."})
+    # r3 relaxed the CRS rule from oneOf to anyOf, so multiple keys are allowed.
+    result = geo_proj.validate({"proj:code": "EPSG:4326", "proj:wkt2": "..."})
+    assert result == {"proj:code": "EPSG:4326", "proj:wkt2": "..."}
 
 
 def test_create_code() -> None:
@@ -130,7 +132,8 @@ def test_create_projjson() -> None:
 
 
 def test_create_empty() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
+    # geo_proj aliases the latest proj revision (r3, anyOf): zero keys still fails.
+    with pytest.raises(ValueError, match="At least one"):
         geo_proj.create()
 
 

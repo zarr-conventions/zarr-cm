@@ -96,3 +96,48 @@ def extract_convention(
         remaining["zarr_conventions"] = new_conventions
 
     return remaining, convention_data
+
+
+def resolve_revision_label(
+    attrs: dict[str, Any],
+    uuid: str,
+    schema_url_by_revision: dict[str, str],
+    convention_name: str,
+) -> str | None:
+    """Return the revision label a document claims for a convention.
+
+    Returns the label whose ``schema_url`` matches the convention's CMO, or
+    ``None`` if the convention's ``uuid`` is present but its ``schema_url`` is
+    unrecognized (an older/newer/foreign revision). Raises ``ValueError`` if the
+    convention is absent (no CMO with *uuid*) -- asking which revision is present
+    for a convention that is not there is a caller error.
+    """
+    present = any(cmo.get("uuid") == uuid for cmo in attrs.get("zarr_conventions", []))
+    if not present:
+        msg = f"convention {convention_name!r} is not present in attrs"
+        raise ValueError(msg)
+    return detect_revision(attrs, uuid, schema_url_by_revision)
+
+
+def detect_revision(
+    attrs: dict[str, Any],
+    uuid: str,
+    schema_url_by_revision: dict[str, str],
+) -> str | None:
+    """Return the revision label whose pinned schema_url matches the document's CMO.
+
+    Looks for a convention-metadata object in ``attrs['zarr_conventions']``
+    whose ``uuid`` matches *uuid*. If found, returns the revision label whose
+    ``schema_url`` equals that CMO's ``schema_url``. Returns ``None`` if the
+    convention is absent, or present but carrying an unrecognized schema_url
+    (e.g. a legacy/dangling URL) -- callers fall back to the latest revision.
+
+    Entries in ``zarr_conventions`` are assumed to be CMO dicts (consistent
+    with the rest of this module). Revisions are assumed to have distinct
+    ``schema_url`` values; if two share one, the inverse mapping is ambiguous.
+    """
+    by_url = {url: label for label, url in schema_url_by_revision.items()}
+    for cmo in attrs.get("zarr_conventions", []):
+        if cmo.get("uuid") == uuid:
+            return by_url.get(cmo.get("schema_url", ""))
+    return None

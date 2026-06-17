@@ -1,0 +1,20 @@
+name: Check Upstream Drift
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+jobs:
+  check-upstream:
+    name: Detect schema drift against upstream main
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Check for upstream schema drift
+        run: python .github/scripts/check_upstream.py

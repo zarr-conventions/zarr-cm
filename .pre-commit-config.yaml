@@ -53,7 +53,10 @@ repos:
     rev: "v1.19.1"
     hooks:
       - id: mypy
-        files: src|tests|noxfile.py
+        # tests/ is not an installed package in the isolated hook env, so mypy
+        # cannot resolve `import zarr_cm` there; tests are type-checked by nox/CI
+        # where the package is installed. Keep the commit-time hook scoped to src.
+        files: src|noxfile.py
         args: []
         additional_dependencies:
           - nox
