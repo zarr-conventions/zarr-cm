@@ -51,6 +51,8 @@ Each module provides:
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
 
+See the [docs](https://zarr-cm.readthedocs.io/en/latest/) for more information.
+
 ## Installation
 
 ```bash
