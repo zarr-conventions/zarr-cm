@@ -1,7 +1,13 @@
 from __future__ import annotations
 
 import typing
-from typing import Any, NotRequired, TypedDict
+from typing import NotRequired, TypedDict
+
+JsonPrimitive = bool | int | float | str | None
+JsonType = (
+    JsonPrimitive | list["JsonType"] | tuple["JsonType", ...] | dict[str, "JsonType"]
+)
+JsonDict = dict[str, JsonType]
 
 if typing.TYPE_CHECKING:
     from collections.abc import Callable
@@ -20,10 +26,10 @@ class ConventionMetadataObject(TypedDict):
 class ConventionAttrs(TypedDict):
     """Attributes dict with a ``zarr_conventions`` array."""
 
-    zarr_conventions: list[ConventionMetadataObject]
+    zarr_conventions: tuple[ConventionMetadataObject, ...]
 
 
-def validate_convention_metadata_object(cmo: dict[str, Any]) -> None:
+def validate_convention_metadata_object(cmo: JsonDict) -> None:
     """Validate that a ConventionMetadataObject has at least one identifier."""
     if not any(k in cmo for k in ("uuid", "schema_url", "spec_url")):
         msg = "ConventionMetadataObject must have at least one of 'uuid', 'schema_url', or 'spec_url'"
@@ -31,12 +37,12 @@ def validate_convention_metadata_object(cmo: dict[str, Any]) -> None:
 
 
 def insert_convention(
-    attrs: dict[str, Any],
+    attrs: JsonDict,
     cmo: ConventionMetadataObject,
-    convention_data: dict[str, Any],
+    convention_data: JsonDict,
     *,
     overwrite: bool = False,
-) -> dict[str, Any]:
+) -> JsonDict:
     """Insert convention metadata into an attributes dict.
 
     Returns a new dict with the convention data merged in and the CMO
@@ -61,26 +67,31 @@ def insert_convention(
             msg = f"attrs already contains keys that would be overwritten by convention data: {sorted(collisions)}. Pass overwrite=True to allow."
             raise ValueError(msg)
     result = {**attrs, **convention_data}
-    existing: list[ConventionMetadataObject] = list(result.get("zarr_conventions", []))
+    existing: list[ConventionMetadataObject] = list(
+        typing.cast(
+            "typing.Iterable[ConventionMetadataObject]",
+            result.get("zarr_conventions", ()),
+        )
+    )
     if cmo not in existing:
         existing.append(cmo)
-    result["zarr_conventions"] = existing
+    result["zarr_conventions"] = typing.cast("JsonType", existing)
     return result
 
 
 def extract_convention(
-    attrs: dict[str, Any],
+    attrs: JsonDict,
     convention_keys: set[str],
     match_fn: Callable[[ConventionMetadataObject], bool],
-) -> tuple[dict[str, Any], dict[str, Any]]:
+) -> tuple[JsonDict, JsonDict]:
     """Extract convention metadata from an attributes dict.
 
     Returns ``(remaining_attrs, convention_data)`` where the matching CMO
     is removed from ``zarr_conventions`` and the convention-specific keys
     are separated out.
     """
-    remaining: dict[str, Any] = {}
-    convention_data: dict[str, Any] = {}
+    remaining: JsonDict = {}
+    convention_data: JsonDict = {}
 
     for key, value in attrs.items():
         if key == "zarr_conventions":
@@ -90,16 +101,18 @@ def extract_convention(
         else:
             remaining[key] = value
 
-    old_conventions: list[ConventionMetadataObject] = attrs.get("zarr_conventions", [])
+    old_conventions = typing.cast(
+        "typing.Iterable[ConventionMetadataObject]", attrs.get("zarr_conventions", ())
+    )
     new_conventions = [cmo for cmo in old_conventions if not match_fn(cmo)]
     if new_conventions:
-        remaining["zarr_conventions"] = new_conventions
+        remaining["zarr_conventions"] = typing.cast("JsonType", new_conventions)
 
     return remaining, convention_data
 
 
 def resolve_revision_label(
-    attrs: dict[str, Any],
+    attrs: JsonDict,
     uuid: str,
     schema_url_by_revision: dict[str, str],
     convention_name: str,
@@ -112,7 +125,13 @@ def resolve_revision_label(
     convention is absent (no CMO with *uuid*) -- asking which revision is present
     for a convention that is not there is a caller error.
     """
-    present = any(cmo.get("uuid") == uuid for cmo in attrs.get("zarr_conventions", []))
+    present = any(
+        cmo.get("uuid") == uuid
+        for cmo in typing.cast(
+            "typing.Iterable[ConventionMetadataObject]",
+            attrs.get("zarr_conventions", ()),
+        )
+    )
     if not present:
         msg = f"convention {convention_name!r} is not present in attrs"
         raise ValueError(msg)
@@ -120,7 +139,7 @@ def resolve_revision_label(
 
 
 def detect_revision(
-    attrs: dict[str, Any],
+    attrs: JsonDict,
     uuid: str,
     schema_url_by_revision: dict[str, str],
 ) -> str | None:
@@ -137,7 +156,9 @@ def detect_revision(
     ``schema_url`` values; if two share one, the inverse mapping is ambiguous.
     """
     by_url = {url: label for label, url in schema_url_by_revision.items()}
-    for cmo in attrs.get("zarr_conventions", []):
+    for cmo in typing.cast(
+        "typing.Iterable[ConventionMetadataObject]", attrs.get("zarr_conventions", ())
+    ):
         if cmo.get("uuid") == uuid:
             return by_url.get(cmo.get("schema_url", ""))
     return None

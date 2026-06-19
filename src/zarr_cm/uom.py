@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, NotRequired, TypedDict
+from typing import Final, NotRequired, TypedDict, cast
 
 from zarr_cm._core import (
     ConventionMetadataObject,
+    JsonDict,
     extract_convention,
     insert_convention,
     resolve_revision_label,
@@ -29,7 +30,7 @@ class UomAttrs(TypedDict):
 class UomConventionAttrs(TypedDict):
     """Attributes dict containing uom convention metadata."""
 
-    zarr_conventions: list[ConventionMetadataObject]
+    zarr_conventions: tuple[ConventionMetadataObject, ...]
     uom: UomAttrs
 
 
@@ -50,7 +51,7 @@ CONVENTION_KEYS: Final = {"uom"}
 _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 
 
-def detect(attrs: dict[str, Any]) -> str | None:
+def detect(attrs: JsonDict) -> str | None:
     """Return the revision label this document claims for the uom convention.
 
     Uom has a single revision (``"v1"``); returns it when present with the
@@ -69,20 +70,23 @@ def create(
     result = UomAttrs(ucum=ucum)
     if description is not None:
         result["description"] = description
-    validate(dict(result))
+    validate(dict(cast("JsonDict", result)))
     return result
 
 
-def insert(
-    attrs: dict[str, Any], data: UomAttrs, *, overwrite: bool = False
-) -> dict[str, Any]:
+def insert(attrs: JsonDict, data: UomAttrs, *, overwrite: bool = False) -> JsonDict:
     """Insert uom convention metadata into an attributes dict."""
-    return insert_convention(attrs, CMO, {"uom": dict(data)}, overwrite=overwrite)
+    return insert_convention(
+        attrs,
+        CMO,
+        {"uom": dict(cast("JsonDict", data))},
+        overwrite=overwrite,
+    )
 
 
 def extract(
-    attrs: dict[str, Any],
-) -> tuple[dict[str, Any], UomAttrs]:
+    attrs: JsonDict,
+) -> tuple[JsonDict, UomAttrs]:
     """Extract uom convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -97,7 +101,7 @@ def extract(
     return remaining, UomAttrs(**convention_data["uom"])  # type: ignore[typeddict-item]
 
 
-def validate(data: dict[str, Any]) -> UomAttrs:
+def validate(data: JsonDict) -> UomAttrs:
     """Validate uom convention data.
 
     ``ucum`` must be present.

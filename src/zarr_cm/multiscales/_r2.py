@@ -6,10 +6,11 @@ Identical in shape to r1; pins the schema/spec URLs to the v0.1 release.
 
 from __future__ import annotations
 
-from typing import Any, Final, NotRequired, TypedDict
+from typing import Final, NotRequired, TypedDict, cast
 
 from zarr_cm._core import (
     ConventionMetadataObject,
+    JsonDict,
     extract_convention,
     insert_convention,
 )
@@ -18,8 +19,8 @@ from zarr_cm._core import (
 class Transform(TypedDict):
     """Coordinate transformation with scale and translation."""
 
-    scale: NotRequired[list[float]]
-    translation: NotRequired[list[float]]
+    scale: NotRequired[list[float] | tuple[float, ...]]
+    translation: NotRequired[list[float] | tuple[float, ...]]
 
 
 class LayoutObject(TypedDict):
@@ -34,14 +35,14 @@ class LayoutObject(TypedDict):
 class MultiscalesAttrs(TypedDict):
     """Multiscale pyramid layout and metadata."""
 
-    layout: list[LayoutObject]
+    layout: list[LayoutObject] | tuple[LayoutObject, ...]
     resampling_method: NotRequired[str]
 
 
 class MultiscalesConventionAttrs(TypedDict):
     """Attributes dict containing multiscales convention metadata."""
 
-    zarr_conventions: list[ConventionMetadataObject]
+    zarr_conventions: tuple[ConventionMetadataObject, ...]
     multiscales: MultiscalesAttrs
 
 
@@ -76,29 +77,32 @@ CONVENTION_KEYS: Final = {"multiscales"}
 
 def create(
     *,
-    layout: list[LayoutObject],
+    layout: tuple[LayoutObject, ...],
     resampling_method: str | None = None,
 ) -> MultiscalesAttrs:
     """Create a ``MultiscalesAttrs`` dict from keyword arguments."""
     result = MultiscalesAttrs(layout=layout)
     if resampling_method is not None:
         result["resampling_method"] = resampling_method
-    validate(dict(result))
+    validate(dict(cast("JsonDict", result)))
     return result
 
 
 def insert(
-    attrs: dict[str, Any], data: MultiscalesAttrs, *, overwrite: bool = False
-) -> dict[str, Any]:
+    attrs: JsonDict, data: MultiscalesAttrs, *, overwrite: bool = False
+) -> JsonDict:
     """Insert multiscales convention metadata into an attributes dict."""
     return insert_convention(
-        attrs, CMO, {"multiscales": dict(data)}, overwrite=overwrite
+        attrs,
+        CMO,
+        {"multiscales": dict(cast("JsonDict", data))},
+        overwrite=overwrite,
     )
 
 
 def extract(
-    attrs: dict[str, Any],
-) -> tuple[dict[str, Any], MultiscalesAttrs]:
+    attrs: JsonDict,
+) -> tuple[JsonDict, MultiscalesAttrs]:
     """Extract multiscales convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -113,7 +117,7 @@ def extract(
     return remaining, MultiscalesAttrs(**convention_data["multiscales"])  # type: ignore[typeddict-item]
 
 
-def validate(data: dict[str, Any]) -> MultiscalesAttrs:
+def validate(data: JsonDict) -> MultiscalesAttrs:
     """Validate multiscales convention data.
 
     ``layout`` must have at least one item, and each layout entry
@@ -123,11 +127,19 @@ def validate(data: dict[str, Any]) -> MultiscalesAttrs:
         msg = "'layout' is required"
         raise ValueError(msg)
 
-    if len(data["layout"]) < 1:
+    layout = data["layout"]
+    if not isinstance(layout, (list, tuple)):
+        msg = "'layout' must be an array"
+        raise TypeError(msg)
+
+    if len(layout) < 1:
         msg = "'layout' must have at least one item"
         raise ValueError(msg)
 
-    for i, entry in enumerate(data["layout"]):
+    for i, entry in enumerate(layout):
+        if not isinstance(entry, dict):
+            msg = f"layout[{i}] must be an object"
+            raise TypeError(msg)
         if "derived_from" in entry and "transform" not in entry:
             msg = f"layout[{i}] has 'derived_from' but is missing 'transform'"
             raise ValueError(msg)

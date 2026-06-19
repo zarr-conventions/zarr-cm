@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any, Final, NotRequired, TypedDict
+from typing import Final, NotRequired, TypedDict, cast
 
 from zarr_cm._core import (
     ConventionMetadataObject,
+    JsonDict,
     extract_convention,
     insert_convention,
 )
@@ -15,17 +16,17 @@ GeoProjAttrs = TypedDict(
     {
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
-        "proj:projjson": NotRequired[dict[str, Any]],
+        "proj:projjson": NotRequired[JsonDict],
     },
 )
 
 GeoProjConventionAttrs = TypedDict(
     "GeoProjConventionAttrs",
     {
-        "zarr_conventions": list[ConventionMetadataObject],
+        "zarr_conventions": tuple[ConventionMetadataObject, ...],
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
-        "proj:projjson": NotRequired[dict[str, Any]],
+        "proj:projjson": NotRequired[JsonDict],
     },
 )
 
@@ -48,7 +49,7 @@ def create(
     *,
     code: str | None = None,
     wkt2: str | None = None,
-    projjson: dict[str, Any] | None = None,
+    projjson: JsonDict | None = None,
 ) -> GeoProjAttrs:
     """Create a ``GeoProjAttrs`` dict from keyword arguments."""
     result = GeoProjAttrs()
@@ -58,20 +59,20 @@ def create(
         result["proj:wkt2"] = wkt2
     if projjson is not None:
         result["proj:projjson"] = projjson
-    validate(dict(result))
+    validate(dict(cast("JsonDict", result)))
     return result
 
 
-def insert(
-    attrs: dict[str, Any], data: GeoProjAttrs, *, overwrite: bool = False
-) -> dict[str, Any]:
+def insert(attrs: JsonDict, data: GeoProjAttrs, *, overwrite: bool = False) -> JsonDict:
     """Insert geo-proj convention metadata into an attributes dict."""
-    return insert_convention(attrs, CMO, dict(data), overwrite=overwrite)
+    return insert_convention(
+        attrs, CMO, dict(cast("JsonDict", data)), overwrite=overwrite
+    )
 
 
 def extract(
-    attrs: dict[str, Any],
-) -> tuple[dict[str, Any], GeoProjAttrs]:
+    attrs: JsonDict,
+) -> tuple[JsonDict, GeoProjAttrs]:
     """Extract geo-proj convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -81,7 +82,7 @@ def extract(
     return remaining, GeoProjAttrs(**convention_data)  # type: ignore[typeddict-item]
 
 
-def validate(data: dict[str, Any]) -> GeoProjAttrs:
+def validate(data: JsonDict) -> GeoProjAttrs:
     """Validate geo-proj convention data.
 
     Exactly one of ``proj:code``, ``proj:wkt2``, or ``proj:projjson``
