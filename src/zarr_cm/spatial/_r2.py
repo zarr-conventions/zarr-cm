@@ -7,10 +7,11 @@ items to be positive.
 
 from __future__ import annotations
 
-from typing import Any, Final, NotRequired, TypedDict
+from typing import Final, NotRequired, TypedDict, cast
 
 from zarr_cm._core import (
     ConventionMetadataObject,
+    JsonDict,
     extract_convention,
     insert_convention,
 )
@@ -18,11 +19,11 @@ from zarr_cm._core import (
 SpatialAttrs = TypedDict(
     "SpatialAttrs",
     {
-        "spatial:dimensions": list[str],
-        "spatial:bbox": NotRequired[list[float]],
+        "spatial:dimensions": tuple[str, ...],
+        "spatial:bbox": NotRequired[tuple[float, ...]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[list[float]],
-        "spatial:shape": NotRequired[list[int]],
+        "spatial:transform": NotRequired[tuple[float, ...]],
+        "spatial:shape": NotRequired[tuple[int, ...]],
         "spatial:registration": NotRequired[str],
     },
 )
@@ -30,12 +31,12 @@ SpatialAttrs = TypedDict(
 SpatialConventionAttrs = TypedDict(
     "SpatialConventionAttrs",
     {
-        "zarr_conventions": list[ConventionMetadataObject],
-        "spatial:dimensions": list[str],
-        "spatial:bbox": NotRequired[list[float]],
+        "zarr_conventions": tuple[ConventionMetadataObject, ...],
+        "spatial:dimensions": tuple[str, ...],
+        "spatial:bbox": NotRequired[tuple[float, ...]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[list[float]],
-        "spatial:shape": NotRequired[list[int]],
+        "spatial:transform": NotRequired[tuple[float, ...]],
+        "spatial:shape": NotRequired[tuple[int, ...]],
         "spatial:registration": NotRequired[str],
     },
 )
@@ -82,11 +83,11 @@ _VALID_REGISTRATIONS: Final = ("node", "pixel")
 
 def create(
     *,
-    dimensions: list[str],
-    bbox: list[float] | None = None,
+    dimensions: tuple[str, ...],
+    bbox: tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: list[float] | None = None,
-    shape: list[int] | None = None,
+    transform: tuple[float, ...] | None = None,
+    shape: tuple[int, ...] | None = None,
     registration: str | None = None,
 ) -> SpatialAttrs:
     """Create a ``SpatialAttrs`` dict (r2, strict 2D) from keyword arguments."""
@@ -101,20 +102,20 @@ def create(
         result["spatial:shape"] = shape
     if registration is not None:
         result["spatial:registration"] = registration
-    validate(dict(result))
+    validate(dict(cast("JsonDict", result)))
     return result
 
 
-def insert(
-    attrs: dict[str, Any], data: SpatialAttrs, *, overwrite: bool = False
-) -> dict[str, Any]:
+def insert(attrs: JsonDict, data: SpatialAttrs, *, overwrite: bool = False) -> JsonDict:
     """Insert spatial (r2) convention metadata into an attributes dict."""
-    return insert_convention(attrs, CMO, dict(data), overwrite=overwrite)
+    return insert_convention(
+        attrs, CMO, dict(cast("JsonDict", data)), overwrite=overwrite
+    )
 
 
 def extract(
-    attrs: dict[str, Any],
-) -> tuple[dict[str, Any], SpatialAttrs]:
+    attrs: JsonDict,
+) -> tuple[JsonDict, SpatialAttrs]:
     """Extract spatial (r2) convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -124,7 +125,7 @@ def extract(
     return remaining, SpatialAttrs(**convention_data)  # type: ignore[typeddict-item]
 
 
-def validate(data: dict[str, Any]) -> SpatialAttrs:
+def validate(data: JsonDict) -> SpatialAttrs:
     """Validate spatial (r2) convention data: strict 2D, positive shape items."""
     if "spatial:dimensions" not in data:
         msg = "'spatial:dimensions' is required"
@@ -132,14 +133,27 @@ def validate(data: dict[str, Any]) -> SpatialAttrs:
 
     for key, expected in _VALID_LENGTHS.items():
         if key in data:
-            n = len(data[key])
+            value = data[key]
+            if not isinstance(value, tuple):
+                msg = f"'{key}' must be a tuple with exactly {expected} items, got {type(value).__name__}"
+                raise ValueError(msg)
+            n = len(value)
             if n != expected:
                 msg = f"'{key}' must have exactly {expected} items, got {n}"
                 raise ValueError(msg)
 
-    if "spatial:shape" in data and any(v < 1 for v in data["spatial:shape"]):
-        msg = "'spatial:shape' items must be positive (>= 1)"
-        raise ValueError(msg)
+    if "spatial:shape" in data:
+        shape = data["spatial:shape"]
+        if not isinstance(shape, tuple):
+            msg = "'spatial:shape' must be a tuple"
+            raise TypeError(msg)
+        for v in shape:
+            if not isinstance(v, int):
+                msg = "'spatial:shape' items must be integers"
+                raise TypeError(msg)
+            if v < 1:
+                msg = "'spatial:shape' items must be positive (>= 1)"
+                raise ValueError(msg)
 
     if (
         "spatial:registration" in data
