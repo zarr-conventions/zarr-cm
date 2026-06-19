@@ -113,11 +113,11 @@ def _revision(label: str) -> _RevisionModule:
 @typing.overload
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
 ) -> SpatialAttrsR3: ...
 
@@ -125,11 +125,11 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
     revision: Literal["r1"],
 ) -> SpatialAttrsR1: ...
@@ -138,11 +138,11 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
     revision: Literal["r2"],
 ) -> SpatialAttrsR2: ...
@@ -151,11 +151,11 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
     revision: Literal["r3"],
 ) -> SpatialAttrsR3: ...
@@ -164,11 +164,11 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
     revision: str,
 ) -> SpatialAttrsR1 | SpatialAttrsR2 | SpatialAttrsR3: ...

@@ -118,7 +118,7 @@ def _revision(label: str) -> _RevisionModule:
 @typing.overload
 def create(
     *,
-    layout: tuple[LayoutObjectR2, ...],
+    layout: list[LayoutObjectR2] | tuple[LayoutObjectR2, ...],
     resampling_method: str | None = None,
 ) -> MultiscalesAttrsR2: ...
 
@@ -126,7 +126,7 @@ def create(
 @typing.overload
 def create(
     *,
-    layout: tuple[LayoutObjectR1, ...],
+    layout: list[LayoutObjectR1] | tuple[LayoutObjectR1, ...],
     resampling_method: str | None = None,
     revision: Literal["r1"],
 ) -> MultiscalesAttrsR1: ...
@@ -135,7 +135,7 @@ def create(
 @typing.overload
 def create(
     *,
-    layout: tuple[LayoutObjectR2, ...],
+    layout: list[LayoutObjectR2] | tuple[LayoutObjectR2, ...],
     resampling_method: str | None = None,
     revision: Literal["r2"],
 ) -> MultiscalesAttrsR2: ...
@@ -144,7 +144,8 @@ def create(
 @typing.overload
 def create(
     *,
-    layout: tuple[LayoutObjectR1 | LayoutObjectR2, ...],
+    layout: list[LayoutObjectR1 | LayoutObjectR2]
+    | tuple[LayoutObjectR1 | LayoutObjectR2, ...],
     resampling_method: str | None = None,
     revision: str,
 ) -> MultiscalesAttrsR1 | MultiscalesAttrsR2: ...

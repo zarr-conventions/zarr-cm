@@ -19,8 +19,8 @@ from zarr_cm._core import (
 class Transform(TypedDict):
     """Coordinate transformation with scale and translation."""
 
-    scale: NotRequired[tuple[float, ...]]
-    translation: NotRequired[tuple[float, ...]]
+    scale: NotRequired[list[float] | tuple[float, ...]]
+    translation: NotRequired[list[float] | tuple[float, ...]]
 
 
 class LayoutObject(TypedDict):
@@ -35,7 +35,7 @@ class LayoutObject(TypedDict):
 class MultiscalesAttrs(TypedDict):
     """Multiscale pyramid layout and metadata."""
 
-    layout: tuple[LayoutObject, ...]
+    layout: list[LayoutObject] | tuple[LayoutObject, ...]
     resampling_method: NotRequired[str]
 
 
@@ -110,7 +110,7 @@ def extract(
         lambda cmo: cmo.get("uuid") == UUID,
     )
     if not convention_data:
-        return remaining, MultiscalesAttrs(layout=())
+        return remaining, MultiscalesAttrs(layout=[])
     if "multiscales" not in convention_data:
         msg = "Extracted convention data does not contain 'multiscales' key"
         raise KeyError(msg)

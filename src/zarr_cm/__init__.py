@@ -95,17 +95,19 @@ ALL_CONVENTION_KEYS: Final = frozenset(
 MultiConventionAttrs = TypedDict(
     "MultiConventionAttrs",
     {
-        "zarr_conventions": NotRequired[tuple[ConventionMetadataObject, ...]],
+        "zarr_conventions": NotRequired[
+            list[ConventionMetadataObject] | tuple[ConventionMetadataObject, ...]
+        ],
         # geo-proj
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JsonDict],
         # spatial
-        "spatial:dimensions": NotRequired[tuple[str, ...]],
-        "spatial:bbox": NotRequired[tuple[float, ...]],
+        "spatial:dimensions": NotRequired[list[str] | tuple[str, ...]],
+        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[tuple[float, ...]],
-        "spatial:shape": NotRequired[tuple[int, ...]],
+        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
+        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
         "spatial:registration": NotRequired[str],
         # multiscales
         "multiscales": NotRequired[MultiscalesAttrs],
@@ -164,7 +166,9 @@ def _read_rev_kwargs(
     # The aggregate layer is a privileged consumer of a revisioned convention's
     # read-revision resolver; it is internal to the package, not third-party.
     revisioned = cast("_RevisionedConventionModule", mod)
-    return {"revision": revisioned._resolve_read_revision(attrs, None)}
+    return {
+        "revision": revisioned._resolve_read_revision(attrs, None)  # pylint: disable=protected-access
+    }
 
 
 def _detect_conventions(attrs: JsonDict) -> frozenset[ConventionName]:

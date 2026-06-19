@@ -14,11 +14,11 @@ from zarr_cm._core import (
 SpatialAttrs = TypedDict(
     "SpatialAttrs",
     {
-        "spatial:dimensions": tuple[str, ...],
-        "spatial:bbox": NotRequired[tuple[float, ...]],
+        "spatial:dimensions": list[str] | tuple[str, ...],
+        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[tuple[float, ...]],
-        "spatial:shape": NotRequired[tuple[int, ...]],
+        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
+        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
         "spatial:registration": NotRequired[str],
     },
 )
@@ -27,11 +27,11 @@ SpatialConventionAttrs = TypedDict(
     "SpatialConventionAttrs",
     {
         "zarr_conventions": tuple[ConventionMetadataObject, ...],
-        "spatial:dimensions": tuple[str, ...],
-        "spatial:bbox": NotRequired[tuple[float, ...]],
+        "spatial:dimensions": list[str] | tuple[str, ...],
+        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[tuple[float, ...]],
-        "spatial:shape": NotRequired[tuple[int, ...]],
+        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
+        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
         "spatial:registration": NotRequired[str],
     },
 )
@@ -70,11 +70,11 @@ _VALID_REGISTRATIONS: Final = ("node", "pixel")
 
 def create(
     *,
-    dimensions: tuple[str, ...],
-    bbox: tuple[float, ...] | None = None,
+    dimensions: list[str] | tuple[str, ...],
+    bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
-    transform: tuple[float, ...] | None = None,
-    shape: tuple[int, ...] | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
 ) -> SpatialAttrs:
     """Create a ``SpatialAttrs`` dict from keyword arguments."""
@@ -121,8 +121,8 @@ def validate(data: JsonDict) -> SpatialAttrs:
     for key, valid in _VALID_LENGTHS.items():
         if key in data:
             value = data[key]
-            if not isinstance(value, tuple):
-                msg = f"'{key}' must be a tuple with {' or '.join(str(v) for v in valid)} items, got {type(value).__name__}"
+            if not isinstance(value, (list, tuple)):
+                msg = f"'{key}' must be an array with {' or '.join(str(v) for v in valid)} items, got {type(value).__name__}"
                 raise ValueError(msg)
             n = len(value)
             if n not in valid:
