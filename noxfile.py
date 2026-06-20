@@ -43,6 +43,19 @@ def pylint(session: nox.Session) -> None:
 
 
 @nox.session
+def typecheck(session: nox.Session) -> None:
+    """
+    Run pyright over src and tests.
+
+    The package is installed so ``import zarr_cm`` resolves in ``tests/`` (which
+    the commit-time pre-commit hook cannot do in its isolated env).
+    """
+    type_deps = nox.project.dependency_groups(PROJECT, "typecheck", "test")
+    session.install("-e.", *type_deps)
+    session.run("pyright", *session.posargs)
+
+
+@nox.session
 def tests(session: nox.Session) -> None:
     """
     Run the unit and regular tests.
