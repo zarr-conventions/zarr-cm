@@ -217,3 +217,65 @@ def test_multiscales_revision_roundtrip() -> None:
     assert multiscales.detect(r1_doc) == "r1"
     _, data = multiscales.extract(r1_doc, revision="r1")
     assert data["layout"] == [{"asset": "0"}]
+
+
+# ---------------------------------------------------------------------------
+# Per-revision validate rejection paths, extract, unknown revision
+# ---------------------------------------------------------------------------
+
+
+def test_r1_validate_missing_layout() -> None:
+    with pytest.raises(ValueError, match="'layout' is required"):
+        multiscales_r1.validate({})
+
+
+def test_r1_validate_non_array_layout() -> None:
+    with pytest.raises(TypeError, match="'layout' must be an array"):
+        multiscales_r1.validate({"layout": "nope"})
+
+
+def test_r1_validate_empty_layout() -> None:
+    with pytest.raises(ValueError, match="at least one"):
+        multiscales_r1.validate({"layout": []})
+
+
+def test_r1_validate_entry_not_object() -> None:
+    with pytest.raises(TypeError, match=r"layout\[0\] must be an object"):
+        multiscales_r1.validate({"layout": ["not-an-object"]})
+
+
+def test_r1_validate_derived_without_transform() -> None:
+    with pytest.raises(ValueError, match="missing 'transform'"):
+        multiscales_r1.validate(
+            {"layout": [{"asset": "0"}, {"asset": "1", "derived_from": "0"}]}
+        )
+
+
+def test_r1_extract_missing_convention_returns_empty_layout() -> None:
+    remaining, data = multiscales_r1.extract({"foo": "bar"})
+    assert remaining == {"foo": "bar"}
+    assert data == {"layout": []}
+
+
+def test_r1_extract_roundtrip() -> None:
+    entry: multiscales_r1.LayoutObject = {"asset": "0"}
+    data = multiscales_r1.create(layout=(entry,))
+    inserted = multiscales_r1.insert({"foo": "bar"}, data)
+    remaining, extracted = multiscales_r1.extract(inserted)
+    assert extracted == {"layout": ({"asset": "0"},)}
+    assert remaining == {"foo": "bar"}
+
+
+def test_r2_validate_non_array_layout() -> None:
+    with pytest.raises(TypeError, match="'layout' must be an array"):
+        multiscales_r2.validate({"layout": "nope"})
+
+
+def test_r2_validate_entry_not_object() -> None:
+    with pytest.raises(TypeError, match=r"layout\[0\] must be an object"):
+        multiscales_r2.validate({"layout": ["not-an-object"]})
+
+
+def test_multiscales_unknown_revision_label() -> None:
+    with pytest.raises(ValueError, match="Unknown revision"):
+        multiscales.create(layout=[{"asset": "0"}], revision="bogus")

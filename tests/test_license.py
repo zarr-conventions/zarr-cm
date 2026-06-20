@@ -130,3 +130,18 @@ def test_insert_idempotent() -> None:
     once = license.insert({}, data)
     twice = license.insert(once, data, overwrite=True)
     assert once == twice
+
+
+def test_create_text_branch() -> None:
+    result = license.create(text="Permission is hereby granted...")
+    assert result == {"text": "Permission is hereby granted..."}
+
+
+def test_create_file_branch() -> None:
+    result = license.create(file="LICENSE.txt")
+    assert result == {"file": "LICENSE.txt"}
+
+
+def test_create_path_branch() -> None:
+    result = license.create(path="/licenses/mit")
+    assert result == {"path": "/licenses/mit"}

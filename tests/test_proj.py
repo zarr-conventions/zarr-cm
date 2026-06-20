@@ -166,3 +166,46 @@ def test_r3_create_validates_against_vendored_schema() -> None:
     data = proj_r3.create(code="EPSG:4326")
     node = wrap_attrs(proj_r3.insert({}, data))
     jsonschema.validate(node, R3_SCHEMA)
+
+
+# ---------------------------------------------------------------------------
+# Per-revision create branches, validate rejection, extract, unknown revision
+# ---------------------------------------------------------------------------
+
+
+def test_r1_create_wkt2_branch() -> None:
+    result = proj_r1.create(wkt2='GEOGCS["WGS 84"]')
+    assert result == {"proj:wkt2": 'GEOGCS["WGS 84"]'}
+
+
+def test_r1_create_projjson_branch() -> None:
+    result = proj_r1.create(projjson={"type": "GeographicCRS"})
+    assert result == {"proj:projjson": {"type": "GeographicCRS"}}
+
+
+def test_r1_validate_rejects_zero_keys() -> None:
+    with pytest.raises(ValueError, match="Exactly one"):
+        proj_r1.validate({})
+
+
+def test_r2_create_wkt2_branch() -> None:
+    result = proj_r2.create(wkt2='GEOGCS["WGS 84"]')
+    assert result == {"proj:wkt2": 'GEOGCS["WGS 84"]'}
+
+
+def test_r2_create_projjson_branch() -> None:
+    result = proj_r2.create(projjson={"type": "GeographicCRS"})
+    assert result == {"proj:projjson": {"type": "GeographicCRS"}}
+
+
+def test_r2_extract_roundtrip() -> None:
+    data = proj_r2.create(code="EPSG:4326")
+    inserted = proj_r2.insert({"foo": "bar"}, data)
+    remaining, extracted = proj_r2.extract(inserted)
+    assert extracted == data
+    assert remaining == {"foo": "bar"}
+
+
+def test_proj_unknown_revision_label() -> None:
+    with pytest.raises(ValueError, match="Unknown revision"):
+        proj.create(code="EPSG:4326", revision="bogus")
