@@ -9,15 +9,18 @@ the latest revision for writes / auto-detect for reads.
 from __future__ import annotations
 
 import typing
-from typing import Final, Literal, Protocol, TypeAlias, cast
+from typing import TYPE_CHECKING, Final, Literal, NamedTuple, TypeAlias
 
-from zarr_cm._core import JsonDict, detect_revision, resolve_revision_label
+from zarr_cm._core import JsonDict, JsonValue, detect_revision, resolve_revision_label
 
 from . import _r1, _r2, _r3
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
 # Re-export the latest revision's public types/constants at package level.
-# Listed in __all__ so they count as explicit re-exports under mypy's
-# --no-implicit-reexport (strict mode) without the ``X as X`` idiom.
+# Listed in __all__ so they count as explicit public re-exports without the
+# ``X as X`` idiom.
 from ._r3 import (
     CMO,
     CONVENTION_KEYS,
@@ -61,18 +64,24 @@ __all__ = [
 ]
 
 
-class _RevisionModule(Protocol):
+class _RevisionModule(NamedTuple):
     SCHEMA_URL: str
-    create: typing.Callable[..., object]
+    create: typing.Callable[..., typing.Mapping[str, JsonValue]]
     insert: typing.Callable[..., JsonDict]
-    validate: typing.Callable[..., object]
-    extract: typing.Callable[..., tuple[JsonDict, object]]
+    validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
+    extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
 
 
 _REVISIONS: Final[dict[str, _RevisionModule]] = {
-    "r1": cast("_RevisionModule", _r1),
-    "r2": cast("_RevisionModule", _r2),
-    "r3": cast("_RevisionModule", _r3),
+    "r1": _RevisionModule(
+        _r1.SCHEMA_URL, _r1.create, _r1.insert, _r1.validate, _r1.extract
+    ),
+    "r2": _RevisionModule(
+        _r2.SCHEMA_URL, _r2.create, _r2.insert, _r2.validate, _r2.extract
+    ),
+    "r3": _RevisionModule(
+        _r3.SCHEMA_URL, _r3.create, _r3.insert, _r3.validate, _r3.extract
+    ),
 }
 LATEST: Final = "r3"
 
@@ -86,13 +95,13 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
 }
 
 
-def _resolve_read_revision(attrs: JsonDict, revision: str | None) -> str:
+def _resolve_read_revision(attrs: Mapping[str, JsonValue], revision: str | None) -> str:
     if revision is not None:
         return revision
     return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
 
 
-def detect(attrs: JsonDict) -> str | None:
+def detect(attrs: Mapping[str, JsonValue]) -> str | None:
     """Return the revision label this document claims for the spatial convention.
 
     Returns the label (e.g. ``"r1"``/``"r2"``), or ``None`` if the convention is
@@ -175,12 +184,12 @@ def create(
 
 
 def create(*args: object, revision: str = LATEST, **kwargs: object) -> object:
-    return dict(cast("JsonDict", _revision(revision).create(*args, **kwargs)))
+    return dict(_revision(revision).create(*args, **kwargs))
 
 
 @typing.overload
 def insert(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     data: SpatialAttrsR3,
     *,
     overwrite: bool = False,
@@ -189,7 +198,7 @@ def insert(
 
 @typing.overload
 def insert(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     data: SpatialAttrsR1,
     *,
     revision: Literal["r1"],
@@ -199,7 +208,7 @@ def insert(
 
 @typing.overload
 def insert(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     data: SpatialAttrsR2,
     *,
     revision: Literal["r2"],
@@ -209,7 +218,7 @@ def insert(
 
 @typing.overload
 def insert(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     data: SpatialAttrsR3,
     *,
     revision: Literal["r3"],
@@ -219,8 +228,8 @@ def insert(
 
 @typing.overload
 def insert(
-    attrs: JsonDict,
-    data: JsonDict,
+    attrs: Mapping[str, JsonValue],
+    data: Mapping[str, JsonValue],
     *,
     revision: str,
     overwrite: bool = False,
@@ -228,64 +237,70 @@ def insert(
 
 
 def insert(
-    attrs: JsonDict, data: object, *, revision: str = LATEST, overwrite: bool = False
+    attrs: Mapping[str, JsonValue],
+    data: Mapping[str, JsonValue],
+    *,
+    revision: str = LATEST,
+    overwrite: bool = False,
 ) -> JsonDict:
-    return _revision(revision).insert(
-        attrs, cast("JsonDict", data), overwrite=overwrite
-    )
-
-
-@typing.overload
-def validate(data: JsonDict, *, revision: Literal["r1"]) -> SpatialAttrsR1: ...
-
-
-@typing.overload
-def validate(data: JsonDict, *, revision: Literal["r2"]) -> SpatialAttrsR2: ...
-
-
-@typing.overload
-def validate(data: JsonDict, *, revision: Literal["r3"]) -> SpatialAttrsR3: ...
+    return _revision(revision).insert(attrs, data, overwrite=overwrite)
 
 
 @typing.overload
 def validate(
-    data: JsonDict, *, revision: str | None = None
+    data: Mapping[str, JsonValue], *, revision: Literal["r1"]
+) -> SpatialAttrsR1: ...
+
+
+@typing.overload
+def validate(
+    data: Mapping[str, JsonValue], *, revision: Literal["r2"]
+) -> SpatialAttrsR2: ...
+
+
+@typing.overload
+def validate(
+    data: Mapping[str, JsonValue], *, revision: Literal["r3"]
+) -> SpatialAttrsR3: ...
+
+
+@typing.overload
+def validate(
+    data: Mapping[str, JsonValue], *, revision: str | None = None
 ) -> SpatialAttrsR1 | SpatialAttrsR2 | SpatialAttrsR3: ...
 
 
-def validate(data: JsonDict, *, revision: str | None = None) -> object:
-    return dict(
-        cast(
-            "JsonDict", _revision(_resolve_read_revision(data, revision)).validate(data)
-        )
-    )
+def validate(data: Mapping[str, JsonValue], *, revision: str | None = None) -> object:
+    return dict(_revision(_resolve_read_revision(data, revision)).validate(data))
 
 
 @typing.overload
 def extract(
-    attrs: JsonDict, *, revision: Literal["r1"]
+    attrs: Mapping[str, JsonValue], *, revision: Literal["r1"]
 ) -> tuple[JsonDict, SpatialAttrsR1]: ...
 
 
 @typing.overload
 def extract(
-    attrs: JsonDict, *, revision: Literal["r2"]
+    attrs: Mapping[str, JsonValue], *, revision: Literal["r2"]
 ) -> tuple[JsonDict, SpatialAttrsR2]: ...
 
 
 @typing.overload
 def extract(
-    attrs: JsonDict, *, revision: Literal["r3"]
+    attrs: Mapping[str, JsonValue], *, revision: Literal["r3"]
 ) -> tuple[JsonDict, SpatialAttrsR3]: ...
 
 
 @typing.overload
 def extract(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     *,
     revision: str | None = None,
 ) -> tuple[JsonDict, SpatialAttrsR1 | SpatialAttrsR2 | SpatialAttrsR3]: ...
 
 
-def extract(attrs: JsonDict, *, revision: str | None = None) -> tuple[JsonDict, object]:
+def extract(
+    attrs: Mapping[str, JsonValue], *, revision: str | None = None
+) -> tuple[JsonDict, object]:
     return _revision(_resolve_read_revision(attrs, revision)).extract(attrs)

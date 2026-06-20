@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_sequence, wrap_attrs
 
 from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
@@ -53,7 +53,7 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: SpatialAttrs = {"spatial:dimensions": ["y", "x"]}
     result = spatial.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_extract_spatial() -> None:
@@ -155,8 +155,8 @@ def test_create_full() -> None:
         registration="pixel",
     )
     assert result["spatial:dimensions"] == ["y", "x"]
-    assert result["spatial:bbox"] == [0.0, 0.0, 1.0, 1.0]
-    assert result["spatial:registration"] == "pixel"
+    assert result.get("spatial:bbox") == [0.0, 0.0, 1.0, 1.0]
+    assert result.get("spatial:registration") == "pixel"
 
 
 def test_extract_missing_convention() -> None:
@@ -274,3 +274,100 @@ def test_r3_create_validates_against_vendored_schema() -> None:
     )
     node = wrap_attrs(spatial_r3.insert({}, data))
     jsonschema.validate(node, R3_SCHEMA)
+
+
+# ---------------------------------------------------------------------------
+# validate() rejection paths, per revision (error-branch coverage)
+# ---------------------------------------------------------------------------
+
+
+def test_r1_validate_missing_dimensions() -> None:
+    with pytest.raises(ValueError, match="'spatial:dimensions' is required"):
+        spatial_r1.validate({})
+
+
+def test_r1_validate_non_array_bbox() -> None:
+    with pytest.raises(ValueError, match="must be an array"):
+        spatial_r1.validate({"spatial:dimensions": ["y", "x"], "spatial:bbox": "nope"})
+
+
+def test_r1_validate_wrong_length_dimensions() -> None:
+    with pytest.raises(ValueError, match="must have 2 or 3 items"):
+        spatial_r1.validate({"spatial:dimensions": ["w", "z", "y", "x"]})
+
+
+def test_r1_validate_bad_registration() -> None:
+    with pytest.raises(ValueError, match="spatial:registration"):
+        spatial_r1.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"}
+        )
+
+
+def test_r2_validate_missing_dimensions() -> None:
+    with pytest.raises(ValueError, match="'spatial:dimensions' is required"):
+        spatial_r2.validate({})
+
+
+def test_r2_validate_non_array_bbox() -> None:
+    with pytest.raises(ValueError, match="must be an array with exactly"):
+        spatial_r2.validate({"spatial:dimensions": ["y", "x"], "spatial:bbox": "nope"})
+
+
+def test_r2_validate_non_int_shape_item() -> None:
+    with pytest.raises(TypeError, match="items must be integers"):
+        spatial_r2.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:shape": [1.5, 2]}
+        )
+
+
+def test_r2_validate_non_array_shape() -> None:
+    # spatial:shape passes the _VALID_LENGTHS loop (it is in the loop), so a
+    # non-array value is rejected there before the dedicated shape block. Use a
+    # value that is not a list/tuple to hit the ValueError in the loop.
+    with pytest.raises(ValueError, match="must be an array with exactly"):
+        spatial_r2.validate({"spatial:dimensions": ["y", "x"], "spatial:shape": 5})
+
+
+def test_r2_validate_negative_shape_item() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        spatial_r2.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:shape": (-1, 1)}
+        )
+
+
+def test_r2_validate_bad_registration() -> None:
+    with pytest.raises(ValueError, match="spatial:registration"):
+        spatial_r2.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"}
+        )
+
+
+def test_r3_validate_non_array_bbox() -> None:
+    with pytest.raises(ValueError, match="must be an array with exactly"):
+        spatial_r3.validate({"spatial:dimensions": ["y", "x"], "spatial:bbox": "nope"})
+
+
+def test_r3_validate_non_int_shape_item() -> None:
+    with pytest.raises(TypeError, match="items must be integers"):
+        spatial_r3.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:shape": [1.5, 2]}
+        )
+
+
+def test_r3_validate_negative_shape_item() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        spatial_r3.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:shape": (-1, 1)}
+        )
+
+
+def test_r3_validate_bad_registration() -> None:
+    with pytest.raises(ValueError, match="spatial:registration"):
+        spatial_r3.validate(
+            {"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"}
+        )
+
+
+def test_spatial_unknown_revision_label() -> None:
+    with pytest.raises(ValueError, match="Unknown revision"):
+        spatial.create(dimensions=["y", "x"], revision="bogus")

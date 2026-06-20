@@ -36,6 +36,8 @@ jobs:
           extra_args: --hook-stage manual --all-files
       - name: Run Pylint
         run: uvx nox -s pylint -- --output-format=github
+      - name: Type-check (src + tests)
+        run: uvx nox -s typecheck
 
   checks:
     name: Check Python ${{ matrix.python-version }} on ${{ matrix.runs-on }}

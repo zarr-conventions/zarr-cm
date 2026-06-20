@@ -49,20 +49,21 @@ repos:
         args: ["--fix", "--show-fixes"]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: "v1.19.1"
+  - repo: https://github.com/RobertCraigie/pyright-python
+    rev: v1.1.410
     hooks:
-      - id: mypy
-        # tests/ is not an installed package in the isolated hook env, so mypy
-        # cannot resolve `import zarr_cm` there; tests are type-checked by nox/CI
-        # where the package is installed. Keep the commit-time hook scoped to src.
+      - id: pyright
+        # tests/ is not an installed package in the isolated hook env, so pyright
+        # cannot resolve `import zarr_cm` there; tests are type-checked by the
+        # `typecheck` nox session where the package is installed. Keep the
+        # commit-time hook scoped to src.
         files: src|noxfile.py
-        args: []
         additional_dependencies:
           - nox
           - pytest
           - pytest-examples
           - types-jsonschema
+          - typing_extensions>=4.13
 
   - repo: https://github.com/codespell-project/codespell
     rev: "v2.4.1"

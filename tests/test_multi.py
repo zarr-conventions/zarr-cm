@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, get_args
 
 import pytest
+from conftest import as_mapping, as_sequence
 
 import zarr_cm
 from zarr_cm import (
@@ -52,7 +53,7 @@ def test_all_convention_keys_constant() -> None:
 def test_create_many_single() -> None:
     result = create_many({"geo-proj": {"proj:code": "EPSG:4326"}})
     assert result["proj:code"] == "EPSG:4326"
-    assert len(result["zarr_conventions"]) == 1
+    assert len(as_sequence(result["zarr_conventions"])) == 1
 
 
 def test_create_many_mixed() -> None:
@@ -64,7 +65,7 @@ def test_create_many_mixed() -> None:
     )
     assert result["proj:code"] == "EPSG:4326"
     assert result["license"] == {"spdx": "MIT"}
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_create_many_all() -> None:
@@ -77,12 +78,15 @@ def test_create_many_all() -> None:
             "uom": {"ucum": {"unit": "kg"}},
         }
     )
-    assert len(result["zarr_conventions"]) == 5
+    assert len(as_sequence(result["zarr_conventions"])) == 5
     assert result["proj:code"] == "EPSG:4326"
     assert result["spatial:dimensions"] == ["y", "x"]
-    assert result["multiscales"]["layout"] == [{"asset": "0"}]
+    multiscales_data = as_mapping(result["multiscales"])
+    assert multiscales_data["layout"] == [{"asset": "0"}]
     assert result["license"] == {"spdx": "MIT"}
-    assert result["uom"]["ucum"]["unit"] == "kg"
+    uom_data = as_mapping(result["uom"])
+    ucum = as_mapping(uom_data["ucum"])
+    assert ucum["unit"] == "kg"
 
 
 def test_create_many_invalid_name() -> None:
@@ -249,7 +253,8 @@ def test_create_many_revision_override() -> None:
     )
     assert result["spatial:dimensions"] == ["z", "y", "x"]
     # CMO carries the r1 (dangling tags/v1) url, not the r2 pinned url.
-    urls = [c.get("schema_url", "") for c in result["zarr_conventions"]]
+    conventions = [as_mapping(cmo) for cmo in as_sequence(result["zarr_conventions"])]
+    urls = [str(c.get("schema_url", "")) for c in conventions]
     assert any("refs/tags/v1" in u for u in urls)
 
 

@@ -2,7 +2,7 @@
 
 Defines :class:`ConventionModule` and statically asserts that every convention
 module (and revision submodule) satisfies it. A signature or constant drift in
-any dispatch target fails ``mypy src/`` at the corresponding ``_check_*`` line.
+any dispatch target fails ``pyright src/`` at the corresponding ``_check_*`` line.
 """
 
 from __future__ import annotations
@@ -10,8 +10,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from typing import cast
-
     from ._core import ConventionMetadataObject
 
 
@@ -26,16 +24,36 @@ class ConventionModule(Protocol):
     verifies each convention module exposes the shared names.
     """
 
-    UUID: str
-    SCHEMA_URL: str
-    SPEC_URL: str
-    CMO: ConventionMetadataObject
-    CONVENTION_KEYS: set[str]
+    # The uppercase property names below deliberately mirror the module-level
+    # constants they pin (UUID/SCHEMA_URL/...), so snake_case does not apply.
+    # pylint: disable=invalid-name
 
-    create: object
-    insert: object
-    extract: object
-    validate: object
+    # Read-only properties (not plain attributes): a plain ``x: str`` Protocol
+    # member is mutable and therefore invariant, which would reject the modules'
+    # ``Final``/``Literal`` constants (e.g. ``UUID: Final = "689b..."``). Declaring
+    # them as read-only properties makes the member covariant so the literal
+    # constants satisfy the contract.
+    @property
+    def UUID(self) -> str: ...
+    @property
+    def SCHEMA_URL(self) -> str: ...
+    @property
+    def SPEC_URL(self) -> str: ...
+    @property
+    def CMO(self) -> ConventionMetadataObject: ...
+    @property
+    def CONVENTION_KEYS(self) -> set[str]: ...
+
+    # Likewise read-only: the modules expose these as plain functions, which are
+    # only assignable to an invariant ``object`` member via a covariant property.
+    @property
+    def create(self) -> object: ...
+    @property
+    def insert(self) -> object: ...
+    @property
+    def extract(self) -> object: ...
+    @property
+    def validate(self) -> object: ...
 
 
 if TYPE_CHECKING:
@@ -49,13 +67,13 @@ if TYPE_CHECKING:
     from .spatial import _r2 as _spatial_r2
 
     # Each dispatch target must satisfy ConventionModule. A signature/constant
-    # drift in any of these fails `mypy src/` at the corresponding line.
+    # drift in any of these fails `pyright src/` at the corresponding line.
     # Adding a convention or revision means adding one line here.
-    _check_spatial_r1: ConventionModule = cast("ConventionModule", _spatial_r1)
-    _check_spatial_r2: ConventionModule = cast("ConventionModule", _spatial_r2)
-    _check_proj_r1: ConventionModule = cast("ConventionModule", _proj_r1)
-    _check_proj_r2: ConventionModule = cast("ConventionModule", _proj_r2)
-    _check_multiscales_r1: ConventionModule = cast("ConventionModule", _multiscales_r1)
-    _check_multiscales_r2: ConventionModule = cast("ConventionModule", _multiscales_r2)
-    _check_license: ConventionModule = cast("ConventionModule", _license)
-    _check_uom: ConventionModule = cast("ConventionModule", _uom)
+    _check_spatial_r1: ConventionModule = _spatial_r1
+    _check_spatial_r2: ConventionModule = _spatial_r2
+    _check_proj_r1: ConventionModule = _proj_r1
+    _check_proj_r2: ConventionModule = _proj_r2
+    _check_multiscales_r1: ConventionModule = _multiscales_r1
+    _check_multiscales_r2: ConventionModule = _multiscales_r2
+    _check_license: ConventionModule = _license
+    _check_uom: ConventionModule = _uom

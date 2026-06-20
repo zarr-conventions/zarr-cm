@@ -2,18 +2,24 @@
 
 from __future__ import annotations
 
-from typing import Final, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Final, NotRequired
+
+from typing_extensions import TypedDict
 
 from zarr_cm._core import (
     ConventionMetadataObject,
     JsonDict,
+    JsonValue,
     extract_convention,
     insert_convention,
     resolve_revision_label,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
-class LicenseAttrs(TypedDict):
+
+class LicenseAttrs(TypedDict, extra_items=JsonValue):
     """License metadata for a Zarr node."""
 
     spdx: NotRequired[str]
@@ -23,7 +29,7 @@ class LicenseAttrs(TypedDict):
     path: NotRequired[str]
 
 
-class LicenseConventionAttrs(TypedDict):
+class LicenseConventionAttrs(TypedDict, extra_items=JsonValue):
     """Attributes dict containing license convention metadata."""
 
     zarr_conventions: tuple[ConventionMetadataObject, ...]
@@ -49,7 +55,7 @@ CONVENTION_KEYS: Final = {"license"}
 _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 
 
-def detect(attrs: JsonDict) -> str | None:
+def detect(attrs: Mapping[str, JsonValue]) -> str | None:
     """Return the revision label this document claims for the license convention.
 
     License has a single revision (``"v1"``); returns it when present with the
@@ -79,22 +85,24 @@ def create(
         result["file"] = file
     if path is not None:
         result["path"] = path
-    validate(dict(cast("JsonDict", result)))
+    validate(result)
     return result
 
 
-def insert(attrs: JsonDict, data: LicenseAttrs, *, overwrite: bool = False) -> JsonDict:
+def insert(
+    attrs: Mapping[str, JsonValue], data: LicenseAttrs, *, overwrite: bool = False
+) -> JsonDict:
     """Insert license convention metadata into an attributes dict."""
     return insert_convention(
         attrs,
         CMO,
-        {"license": dict(cast("JsonDict", data))},
+        {"license": data},
         overwrite=overwrite,
     )
 
 
 def extract(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> tuple[JsonDict, LicenseAttrs]:
     """Extract license convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
@@ -110,7 +118,7 @@ def extract(
     return remaining, LicenseAttrs(**convention_data["license"])  # type: ignore[typeddict-item]
 
 
-def validate(data: JsonDict) -> LicenseAttrs:
+def validate(data: Mapping[str, JsonValue]) -> LicenseAttrs:
     """Validate license convention data.
 
     At least one of ``spdx``, ``url``, ``text``, ``file``, or ``path``

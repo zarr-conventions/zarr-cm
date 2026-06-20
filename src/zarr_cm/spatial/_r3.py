@@ -7,38 +7,47 @@ items to be positive.
 
 from __future__ import annotations
 
-from typing import Final, NotRequired, TypedDict, cast
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Final, NotRequired
+
+from typing_extensions import TypedDict
 
 from zarr_cm._core import (
     ConventionMetadataObject,
     JsonDict,
+    JsonValue,
     extract_convention,
     insert_convention,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
+
 SpatialAttrs = TypedDict(
     "SpatialAttrs",
     {
-        "spatial:dimensions": list[str] | tuple[str, ...],
-        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
+        "spatial:dimensions": Sequence[str],
+        "spatial:bbox": NotRequired[Sequence[float]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
-        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
+        "spatial:transform": NotRequired[Sequence[float]],
+        "spatial:shape": NotRequired[Sequence[int]],
         "spatial:registration": NotRequired[str],
     },
+    extra_items=JsonValue,
 )
 
 SpatialConventionAttrs = TypedDict(
     "SpatialConventionAttrs",
     {
-        "zarr_conventions": tuple[ConventionMetadataObject, ...],
-        "spatial:dimensions": list[str] | tuple[str, ...],
-        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
+        "zarr_conventions": Sequence[ConventionMetadataObject],
+        "spatial:dimensions": Sequence[str],
+        "spatial:bbox": NotRequired[Sequence[float]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
-        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
+        "spatial:transform": NotRequired[Sequence[float]],
+        "spatial:shape": NotRequired[Sequence[int]],
         "spatial:registration": NotRequired[str],
     },
+    extra_items=JsonValue,
 )
 
 # UUID identifies the convention *family*, not the revision; it is shared with
@@ -102,19 +111,19 @@ def create(
         result["spatial:shape"] = shape
     if registration is not None:
         result["spatial:registration"] = registration
-    validate(dict(cast("JsonDict", result)))
+    validate(result)
     return result
 
 
-def insert(attrs: JsonDict, data: SpatialAttrs, *, overwrite: bool = False) -> JsonDict:
+def insert(
+    attrs: Mapping[str, JsonValue], data: SpatialAttrs, *, overwrite: bool = False
+) -> JsonDict:
     """Insert spatial (r2) convention metadata into an attributes dict."""
-    return insert_convention(
-        attrs, CMO, dict(cast("JsonDict", data)), overwrite=overwrite
-    )
+    return insert_convention(attrs, CMO, data, overwrite=overwrite)
 
 
 def extract(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> tuple[JsonDict, SpatialAttrs]:
     """Extract spatial (r2) convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
@@ -125,7 +134,7 @@ def extract(
     return remaining, SpatialAttrs(**convention_data)  # type: ignore[typeddict-item]
 
 
-def validate(data: JsonDict) -> SpatialAttrs:
+def validate(data: Mapping[str, JsonValue]) -> SpatialAttrs:
     """Validate spatial (r2) convention data: strict 2D, positive shape items."""
     if "spatial:dimensions" not in data:
         msg = "'spatial:dimensions' is required"
