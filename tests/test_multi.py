@@ -288,17 +288,22 @@ def test_validate_many_revision_override_changes_outcome() -> None:
 
 
 def test_validate_all_autodetects_revision_no_args() -> None:
-    # A doc written under r2 must round-trip through validate_all with NO
-    # revisions= argument: detection picks r2 and the same revision is used for
-    # both extract and validate. Regression guard for the read path using the
-    # detected (not LATEST) revision consistently.
+    # A doc carrying a recognized schema_url must round-trip through validate_all
+    # with NO revisions= argument: detection resolves the revision from the
+    # schema_url and the same revision is threaded to both extract and validate.
+    # (proj's surviving revisions are nested -- r2's accepted set is a subset of
+    # r3's -- so the pass/fail outcome cannot distinguish detected-vs-LATEST here;
+    # this is a smoke test of the no-args read path. The detected label itself is
+    # pinned in test_detect.py, and a detected non-LATEST revision driving a
+    # rejection is exercised by test_validate_all_still_rejects_genuine_r2_violation.)
     attrs = proj.insert({}, proj.create(code="urn:ogc", revision="r3"), revision="r3")
-    validate_all(attrs)  # must NOT raise — r3 detected, r3 accepts relaxed code
+    validate_all(attrs)  # must NOT raise -- r3 detected, r3 accepts relaxed code
 
 
 def test_validate_all_still_rejects_genuine_r2_violation() -> None:
-    # Negative control: a doc tagged as r2 (latest) but carrying 3D dimensions
-    # must still be rejected under r2's strict-2D rules.
+    # Negative control: a doc tagged as spatial r2 (a non-latest revision;
+    # LATEST is r3) but carrying 3D dimensions must still be rejected under
+    # r2's strict-2D rules -- i.e. the detected revision is used for validation.
     bad: dict[str, Any] = {
         "spatial:dimensions": ["z", "y", "x"],
         "zarr_conventions": [dict(spatial.r2.CMO)],

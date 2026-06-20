@@ -111,7 +111,9 @@ Upstream Zarr conventions sometimes change their field shapes **in place** —
 keeping the same `uuid` but altering required keys and cardinalities. To let you
 both author data at the current spec and still read data written against an
 earlier draft, the revisioned conventions (`spatial`, `proj`, `multiscales`)
-expose package-local revision labels (`r2`, `r3`, …), ordered oldest → newest.
+expose package-local revision labels ordered oldest → newest. Today `spatial`
+and `proj` ship `r2` and `r3`, while `multiscales` ships only `r2`; more are
+added as upstream conventions evolve.
 
 Each revision pins its emitted `schema_url`/`spec_url` to the **upstream commit
 SHA** it was snapshotted from, so a written document is self-describing: the
