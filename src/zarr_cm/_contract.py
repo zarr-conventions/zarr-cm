@@ -24,6 +24,10 @@ class ConventionModule(Protocol):
     verifies each convention module exposes the shared names.
     """
 
+    # The uppercase property names below deliberately mirror the module-level
+    # constants they pin (UUID/SCHEMA_URL/...), so snake_case does not apply.
+    # pylint: disable=invalid-name
+
     # Read-only properties (not plain attributes): a plain ``x: str`` Protocol
     # member is mutable and therefore invariant, which would reject the modules'
     # ``Final``/``Literal`` constants (e.g. ``UUID: Final = "689b..."``). Declaring
