@@ -5,10 +5,9 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import as_mapping, as_sequence, wrap_attrs
+from conftest import as_sequence, wrap_attrs
 
 from zarr_cm import proj
-from zarr_cm.proj import r1 as proj_r1
 from zarr_cm.proj import r2 as proj_r2
 from zarr_cm.proj import r3 as proj_r3
 
@@ -21,11 +20,6 @@ def test_r2_accepts_valid_code() -> None:
 def test_r2_rejects_malformed_code() -> None:
     with pytest.raises(ValueError, match="proj:code"):
         proj_r2.validate({"proj:code": "epsg-4326"})
-
-
-def test_r1_accepts_malformed_code() -> None:
-    result = proj_r1.validate({"proj:code": "epsg-4326"})
-    assert result == {"proj:code": "epsg-4326"}
 
 
 def test_r2_still_enforces_exactly_one() -> None:
@@ -95,15 +89,6 @@ def test_extract_missing_convention() -> None:
     assert extracted == {}
 
 
-def test_r1_insert_uses_legacy_url() -> None:
-    data: proj_r1.GeoProjAttrs = {"proj:code": "EPSG:4326"}
-    result = proj_r1.insert({}, data)
-    assert any(
-        "zarr-experimental" in str(as_mapping(cmo).get("schema_url", ""))
-        for cmo in as_sequence(result["zarr_conventions"])
-    )
-
-
 # ---------------------------------------------------------------------------
 # r3 (v0.1): relaxed proj:code pattern + anyOf CRS rule
 # ---------------------------------------------------------------------------
@@ -171,21 +156,6 @@ def test_r3_create_validates_against_vendored_schema() -> None:
 # ---------------------------------------------------------------------------
 # Per-revision create branches, validate rejection, extract, unknown revision
 # ---------------------------------------------------------------------------
-
-
-def test_r1_create_wkt2_branch() -> None:
-    result = proj_r1.create(wkt2='GEOGCS["WGS 84"]')
-    assert result == {"proj:wkt2": 'GEOGCS["WGS 84"]'}
-
-
-def test_r1_create_projjson_branch() -> None:
-    result = proj_r1.create(projjson={"type": "GeographicCRS"})
-    assert result == {"proj:projjson": {"type": "GeographicCRS"}}
-
-
-def test_r1_validate_rejects_zero_keys() -> None:
-    with pytest.raises(ValueError, match="Exactly one"):
-        proj_r1.validate({})
 
 
 def test_r2_create_wkt2_branch() -> None:

@@ -9,11 +9,7 @@ from conftest import as_mapping, as_sequence, wrap_attrs
 
 from zarr_cm import multiscales
 from zarr_cm.multiscales import CMO, MultiscalesAttrs
-from zarr_cm.multiscales import r1 as multiscales_r1
 from zarr_cm.multiscales import r2 as multiscales_r2
-
-SCHEMA_PATH = Path(__file__).parent / "schemas" / "multiscales.json"
-SCHEMA = json.loads(SCHEMA_PATH.read_text())
 
 
 def test_insert_multiscales_minimal() -> None:
@@ -198,10 +194,6 @@ def test_r2_schema_url_pinned_to_v0_1() -> None:
     assert "refs/tags/v1/" not in multiscales_r2.SCHEMA_URL
 
 
-def test_r1_keeps_legacy_url() -> None:
-    assert "refs/tags/v1" in multiscales_r1.SCHEMA_URL
-
-
 def test_r2_create_validates_against_vendored_schema() -> None:
     # r2's tag-pinned CMO matches the schema's conventionMetadata const, so our
     # actual emitted output validates against the official v0.1 schema directly.
@@ -211,59 +203,17 @@ def test_r2_create_validates_against_vendored_schema() -> None:
 
 
 def test_multiscales_revision_roundtrip() -> None:
-    r1_doc = multiscales.insert(
-        {}, multiscales.create(layout=[{"asset": "0"}], revision="r1"), revision="r1"
+    r2_doc = multiscales.insert(
+        {}, multiscales.create(layout=[{"asset": "0"}], revision="r2"), revision="r2"
     )
-    assert multiscales.detect(r1_doc) == "r1"
-    _, data = multiscales.extract(r1_doc, revision="r1")
+    assert multiscales.detect(r2_doc) == "r2"
+    _, data = multiscales.extract(r2_doc, revision="r2")
     assert data["layout"] == [{"asset": "0"}]
 
 
 # ---------------------------------------------------------------------------
 # Per-revision validate rejection paths, extract, unknown revision
 # ---------------------------------------------------------------------------
-
-
-def test_r1_validate_missing_layout() -> None:
-    with pytest.raises(ValueError, match="'layout' is required"):
-        multiscales_r1.validate({})
-
-
-def test_r1_validate_non_array_layout() -> None:
-    with pytest.raises(TypeError, match="'layout' must be an array"):
-        multiscales_r1.validate({"layout": "nope"})
-
-
-def test_r1_validate_empty_layout() -> None:
-    with pytest.raises(ValueError, match="at least one"):
-        multiscales_r1.validate({"layout": []})
-
-
-def test_r1_validate_entry_not_object() -> None:
-    with pytest.raises(TypeError, match=r"layout\[0\] must be an object"):
-        multiscales_r1.validate({"layout": ["not-an-object"]})
-
-
-def test_r1_validate_derived_without_transform() -> None:
-    with pytest.raises(ValueError, match="missing 'transform'"):
-        multiscales_r1.validate(
-            {"layout": [{"asset": "0"}, {"asset": "1", "derived_from": "0"}]}
-        )
-
-
-def test_r1_extract_missing_convention_returns_empty_layout() -> None:
-    remaining, data = multiscales_r1.extract({"foo": "bar"})
-    assert remaining == {"foo": "bar"}
-    assert data == {"layout": []}
-
-
-def test_r1_extract_roundtrip() -> None:
-    entry: multiscales_r1.LayoutObject = {"asset": "0"}
-    data = multiscales_r1.create(layout=(entry,))
-    inserted = multiscales_r1.insert({"foo": "bar"}, data)
-    remaining, extracted = multiscales_r1.extract(inserted)
-    assert extracted == {"layout": ({"asset": "0"},)}
-    assert remaining == {"foo": "bar"}
 
 
 def test_r2_validate_non_array_layout() -> None:

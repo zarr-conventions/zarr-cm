@@ -85,15 +85,15 @@ Conventions evolve. `create`/`insert` default to the latest revision;
 ```python
 from zarr_cm import spatial
 
-# Writes use the latest revision by default (spatial r2 is strictly 2D)
+# Writes use the latest revision by default (spatial r3 is strictly 2D)
 latest = spatial.create(dimensions=["y", "x"])
 print(latest)
 #> {'spatial:dimensions': ['y', 'x']}
 
 # Opt into an older revision explicitly to model older data
-old = spatial.create(dimensions=["z", "y", "x"], revision="r1")
+old = spatial.create(dimensions=["y", "x"], revision="r2")
 print(old)
-#> {'spatial:dimensions': ['z', 'y', 'x']}
+#> {'spatial:dimensions': ['y', 'x']}
 ```
 
 <!-- blacken-docs:on -->

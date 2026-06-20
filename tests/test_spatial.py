@@ -9,15 +9,14 @@ from conftest import as_sequence, wrap_attrs
 
 from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
-from zarr_cm.spatial import r1 as spatial_r1
 from zarr_cm.spatial import r2 as spatial_r2
 from zarr_cm.spatial import r3 as spatial_r3
 
-SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial.json"
-SCHEMA = json.loads(SCHEMA_PATH.read_text())
-
 R2_SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial-r2.json"
 R2_SCHEMA = json.loads(R2_SCHEMA_PATH.read_text())
+
+R3_SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial-r3.json"
+R3_SCHEMA = json.loads(R3_SCHEMA_PATH.read_text())
 
 
 def test_insert_spatial_2d() -> None:
@@ -103,14 +102,14 @@ def test_schema_validation_2d() -> None:
     }
     result = spatial.insert({}, data)
     node = wrap_attrs(result)
-    jsonschema.validate(node, SCHEMA)
+    jsonschema.validate(node, R3_SCHEMA)
 
 
 def test_schema_validation_minimal() -> None:
     data: SpatialAttrs = {"spatial:dimensions": ["y", "x"]}
     result = spatial.insert({}, data)
     node = wrap_attrs(result)
-    jsonschema.validate(node, SCHEMA)
+    jsonschema.validate(node, R3_SCHEMA)
 
 
 def test_validate_valid() -> None:
@@ -212,11 +211,6 @@ def test_r2_schema_url_pinned_to_commit() -> None:
     assert "refs/tags/v1" not in spatial_r2.SCHEMA_URL
 
 
-def test_r1_still_accepts_3d() -> None:
-    result = spatial_r1.validate({"spatial:dimensions": ["z", "y", "x"]})
-    assert result == {"spatial:dimensions": ["z", "y", "x"]}
-
-
 def test_r2_create_validates_against_vendored_schema() -> None:
     # This asserts our r2 output conforms to the r2 'spatial:' DATA shape (the
     # strict-2D field constraints). Note the vendored schema does not actually
@@ -257,10 +251,6 @@ def test_spatial_latest_is_r3() -> None:
     )
 
 
-R3_SCHEMA_PATH = Path(__file__).parent / "schemas" / "spatial-r3.json"
-R3_SCHEMA = json.loads(R3_SCHEMA_PATH.read_text())
-
-
 def test_r3_create_validates_against_vendored_schema() -> None:
     # As with the r2 fixture test: the vendored v0.1 schema does not actually
     # constrain our commit-pinned CMO (contains/$ref); this asserts the spatial:
@@ -279,28 +269,6 @@ def test_r3_create_validates_against_vendored_schema() -> None:
 # ---------------------------------------------------------------------------
 # validate() rejection paths, per revision (error-branch coverage)
 # ---------------------------------------------------------------------------
-
-
-def test_r1_validate_missing_dimensions() -> None:
-    with pytest.raises(ValueError, match="'spatial:dimensions' is required"):
-        spatial_r1.validate({})
-
-
-def test_r1_validate_non_array_bbox() -> None:
-    with pytest.raises(ValueError, match="must be an array"):
-        spatial_r1.validate({"spatial:dimensions": ["y", "x"], "spatial:bbox": "nope"})
-
-
-def test_r1_validate_wrong_length_dimensions() -> None:
-    with pytest.raises(ValueError, match="must have 2 or 3 items"):
-        spatial_r1.validate({"spatial:dimensions": ["w", "z", "y", "x"]})
-
-
-def test_r1_validate_bad_registration() -> None:
-    with pytest.raises(ValueError, match="spatial:registration"):
-        spatial_r1.validate(
-            {"spatial:dimensions": ["y", "x"], "spatial:registration": "bad"}
-        )
 
 
 def test_r2_validate_missing_dimensions() -> None:

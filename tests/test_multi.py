@@ -246,58 +246,54 @@ def test_roundtrip() -> None:
 
 
 def test_create_many_revision_override() -> None:
-    # Force spatial r1 so a 3D doc is allowed.
+    # Force spatial r2 instead of the default LATEST (r3) and confirm the emitted
+    # CMO carries r2's commit-pinned schema_url, not r3's.
     result = create_many(
-        {"spatial": {"spatial:dimensions": ["z", "y", "x"]}},
-        revisions={"spatial": "r1"},
+        {"spatial": {"spatial:dimensions": ["y", "x"]}},
+        revisions={"spatial": "r2"},
     )
-    assert result["spatial:dimensions"] == ["z", "y", "x"]
-    # CMO carries the r1 (dangling tags/v1) url, not the r2 pinned url.
+    assert result["spatial:dimensions"] == ["y", "x"]
     conventions = [as_mapping(cmo) for cmo in as_sequence(result["zarr_conventions"])]
     urls = [str(c.get("schema_url", "")) for c in conventions]
-    assert any("refs/tags/v1" in u for u in urls)
+    assert any(u == spatial.r2.SCHEMA_URL for u in urls)
+    assert all(u != spatial.r3.SCHEMA_URL for u in urls)
 
 
 def test_extract_all_autodetects_mixed_revisions() -> None:
     attrs = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+        {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
     )
-    attrs = proj.insert(attrs, proj.create(code="EPSG:4326"))  # proj latest = r2
+    attrs = proj.insert(attrs, proj.create(code="EPSG:4326"))  # proj latest = r3
     _remaining, extracted = extract_all(attrs)
-    assert extracted["spatial"]["spatial:dimensions"] == ["z", "y", "x"]
+    assert extracted["spatial"]["spatial:dimensions"] == ["y", "x"]
     assert extracted["geo-proj"]["proj:code"] == "EPSG:4326"
 
 
 def test_extract_many_revision_override() -> None:
-    attrs = spatial.insert({}, spatial.create(dimensions=["y", "x"]))  # r2
+    attrs = spatial.insert({}, spatial.create(dimensions=["y", "x"]))  # r3 (latest)
     _remaining, extracted = extract_many(
-        attrs, ["spatial"], revisions={"spatial": "r1"}
+        attrs, ["spatial"], revisions={"spatial": "r2"}
     )
     assert extracted["spatial"] == {"spatial:dimensions": ["y", "x"]}
 
 
 def test_validate_many_revision_override_changes_outcome() -> None:
-    # A 3D spatial doc written under r1: valid under r1, invalid under r2.
-    # The revisions= override must select which revision validate_many uses,
-    # so the same doc passes under r1 and raises under r2. This fails if the
-    # override is silently dropped on the read path.
-    attrs = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
-    )
-    validate_many(attrs, ["spatial"], revisions={"spatial": "r1"})  # passes
-    with pytest.raises(ValueError, match="exactly 2"):
-        validate_many(attrs, ["spatial"], revisions={"spatial": "r2"})
+    # proj r2 enforces ^[A-Z]+:[0-9]+$ on proj:code; r3 relaxes to ^[^:]+:[^:]+$.
+    # A doc tagged r3 with a relaxed code passes under r3 but fails under r2, so
+    # the revisions= override genuinely selects which revision validate_many uses.
+    attrs = proj.insert({}, proj.create(code="urn:ogc", revision="r3"), revision="r3")
+    validate_many(attrs, ["geo-proj"], revisions={"geo-proj": "r3"})  # passes
+    with pytest.raises(ValueError, match="proj:code"):
+        validate_many(attrs, ["geo-proj"], revisions={"geo-proj": "r2"})
 
 
-def test_validate_all_autodetects_legacy_revision_no_args() -> None:
-    # A legacy r1 doc (3D spatial) must round-trip through validate_all with NO
-    # revisions= argument: detection picks r1 and the same revision is used for
-    # both extract and validate. Regression guard: a naive impl re-detects after
-    # extract strips the CMO, falls back to LATEST (r2), and wrongly rejects 3D.
-    attrs = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
-    )
-    validate_all(attrs)  # must NOT raise
+def test_validate_all_autodetects_revision_no_args() -> None:
+    # A doc written under r2 must round-trip through validate_all with NO
+    # revisions= argument: detection picks r2 and the same revision is used for
+    # both extract and validate. Regression guard for the read path using the
+    # detected (not LATEST) revision consistently.
+    attrs = proj.insert({}, proj.create(code="urn:ogc", revision="r3"), revision="r3")
+    validate_all(attrs)  # must NOT raise — r3 detected, r3 accepts relaxed code
 
 
 def test_validate_all_still_rejects_genuine_r2_violation() -> None:

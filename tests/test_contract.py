@@ -10,7 +10,7 @@ def _dispatch_targets() -> list[tuple[str, object]]:
     convention module, plus every revision submodule of a revisioned convention.
 
     Revisioned conventions expose their per-revision submodules as public
-    ``r1``/``r2``/... namespaces (the underlying modules that carry the full
+    ``r2``/``r3``/... namespaces (the underlying modules that carry the full
     convention surface); ``_REVISIONS`` holds thin dispatch wrappers, not the
     modules, so we discover the public revision namespaces here instead."""
     targets: list[tuple[str, object]] = []
@@ -38,8 +38,8 @@ def _dispatch_targets() -> list[tuple[str, object]]:
 
 def test_all_dispatch_targets_satisfy_contract() -> None:
     targets = _dispatch_targets()
-    # Sanity: we actually found the known set (7 today: spatial r1/r2,
-    # proj r1/r2, multiscales, license, uom).
+    # Sanity: we actually found the known set (7 today: spatial r2/r3,
+    # proj r2/r3, multiscales, license, uom).
     assert len(targets) >= 7
     for name, mod in targets:
         assert isinstance(mod, ConventionModule), (
