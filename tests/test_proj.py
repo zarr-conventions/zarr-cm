@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_mapping, as_sequence, wrap_attrs
 
 from zarr_cm import proj
 from zarr_cm.proj import r1 as proj_r1
@@ -41,8 +41,8 @@ def test_r2_schema_url_corrected_and_pinned() -> None:
 
 
 def test_r2_cmo_uses_corrected_url() -> None:
-    assert proj_r2.CMO["schema_url"] == proj_r2.SCHEMA_URL
-    assert proj_r2.CMO["uuid"] == "f17cb550-5864-4468-aeb7-f3180cfb622f"
+    assert proj_r2.CMO.get("schema_url") == proj_r2.SCHEMA_URL
+    assert proj_r2.CMO.get("uuid") == "f17cb550-5864-4468-aeb7-f3180cfb622f"
 
 
 # ---------------------------------------------------------------------------
@@ -75,7 +75,7 @@ def test_insert_and_extract_roundtrip() -> None:
     data = proj.create(code="EPSG:4326")
     inserted = proj.insert({"foo": "bar"}, data)
     assert inserted["proj:code"] == "EPSG:4326"
-    assert proj_r3.CMO in inserted["zarr_conventions"]
+    assert proj_r3.CMO in as_sequence(inserted["zarr_conventions"])
     remaining, extracted = proj.extract(inserted)
     assert extracted == data
     assert remaining == {"foo": "bar"}
@@ -99,8 +99,8 @@ def test_r1_insert_uses_legacy_url() -> None:
     data: proj_r1.GeoProjAttrs = {"proj:code": "EPSG:4326"}
     result = proj_r1.insert({}, data)
     assert any(
-        "zarr-experimental" in cmo.get("schema_url", "")
-        for cmo in result["zarr_conventions"]
+        "zarr-experimental" in str(as_mapping(cmo).get("schema_url", ""))
+        for cmo in as_sequence(result["zarr_conventions"])
     )
 
 

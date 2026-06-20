@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_mapping, as_sequence, wrap_attrs
 
 from zarr_cm import license
 from zarr_cm.license import CMO, LicenseAttrs
@@ -24,7 +24,8 @@ def test_insert_license_spdx() -> None:
 def test_insert_license_url() -> None:
     data: LicenseAttrs = {"url": "https://example.com/license"}
     result = license.insert({}, data)
-    assert result["license"]["url"] == "https://example.com/license"
+    license_data = as_mapping(result["license"])
+    assert license_data["url"] == "https://example.com/license"
 
 
 def test_insert_preserves_existing_attrs() -> None:
@@ -38,7 +39,7 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: LicenseAttrs = {"spdx": "MIT"}
     result = license.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_extract_license() -> None:

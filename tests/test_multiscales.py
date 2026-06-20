@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_mapping, as_sequence, wrap_attrs
 
 from zarr_cm import multiscales
 from zarr_cm.multiscales import CMO, MultiscalesAttrs
@@ -19,7 +19,8 @@ SCHEMA = json.loads(SCHEMA_PATH.read_text())
 def test_insert_multiscales_minimal() -> None:
     data: MultiscalesAttrs = {"layout": [{"asset": "0"}]}
     result = multiscales.insert({}, data)
-    assert result["multiscales"]["layout"] == [{"asset": "0"}]
+    multiscales_data = as_mapping(result["multiscales"])
+    assert multiscales_data["layout"] == [{"asset": "0"}]
     assert result["zarr_conventions"] == [CMO]
 
 
@@ -35,7 +36,8 @@ def test_insert_multiscales_with_derived() -> None:
         ],
     }
     result = multiscales.insert({}, data)
-    assert len(result["multiscales"]["layout"]) == 2
+    multiscales_data = as_mapping(result["multiscales"])
+    assert len(as_sequence(multiscales_data["layout"])) == 2
 
 
 def test_insert_preserves_existing_attrs() -> None:
@@ -49,7 +51,7 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: MultiscalesAttrs = {"layout": [{"asset": "0"}]}
     result = multiscales.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_extract_multiscales() -> None:

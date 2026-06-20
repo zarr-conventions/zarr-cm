@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_sequence, wrap_attrs
 
 from zarr_cm import spatial
 from zarr_cm.spatial import CMO, SpatialAttrs
@@ -53,7 +53,7 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: SpatialAttrs = {"spatial:dimensions": ["y", "x"]}
     result = spatial.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_extract_spatial() -> None:
@@ -155,8 +155,8 @@ def test_create_full() -> None:
         registration="pixel",
     )
     assert result["spatial:dimensions"] == ["y", "x"]
-    assert result["spatial:bbox"] == [0.0, 0.0, 1.0, 1.0]
-    assert result["spatial:registration"] == "pixel"
+    assert result.get("spatial:bbox") == [0.0, 0.0, 1.0, 1.0]
+    assert result.get("spatial:registration") == "pixel"
 
 
 def test_extract_missing_convention() -> None:

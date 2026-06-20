@@ -1,19 +1,38 @@
 from __future__ import annotations
 
-import typing
-from typing import NotRequired, TypedDict
+from collections.abc import Mapping, Sequence
+from typing import TYPE_CHECKING, NotRequired, TypeGuard
 
-JsonPrimitive = bool | int | float | str | None
-JsonType = (
-    JsonPrimitive | list["JsonType"] | tuple["JsonType", ...] | dict[str, "JsonType"]
-)
-JsonDict = dict[str, JsonType]
+from typing_extensions import TypedDict
 
-if typing.TYPE_CHECKING:
+if TYPE_CHECKING:
     from collections.abc import Callable
 
+JsonPrimitive = bool | int | float | str | None
+# A read-only, covariant *type-level* view of a JSON value. ``Sequence`` and
+# ``Mapping`` are covariant in their item/value type (unlike the invariant
+# ``list``/``dict``), so concrete JSON-shaped values -- and the convention
+# ``TypedDict``s -- are assignable to it. This says nothing about the concrete
+# runtime container: a JSON array is a ``list`` at runtime (that is what
+# ``json.loads`` produces and what ``json.dumps``/jsonschema expect); the
+# ``Sequence`` arm just declines to *require* a particular container at the type
+# level so both lists and tuples type-check.
+JsonValue = JsonPrimitive | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
+# Mutable build type for constructing attribute dicts.
+JsonDict = dict[str, JsonValue]
 
-class ConventionMetadataObject(TypedDict):
+
+def _is_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
+    return isinstance(value, Mapping)
+
+
+def _is_sequence(value: object) -> TypeGuard[Sequence[object]]:
+    return isinstance(value, Sequence) and not isinstance(
+        value, str | bytes | bytearray
+    )
+
+
+class ConventionMetadataObject(TypedDict, extra_items=JsonValue):
     """A convention metadata object for the ``zarr_conventions`` array."""
 
     uuid: NotRequired[str]
@@ -23,10 +42,62 @@ class ConventionMetadataObject(TypedDict):
     description: NotRequired[str]
 
 
-class ConventionAttrs(TypedDict):
+class ConventionAttrs(TypedDict, extra_items=JsonValue):
     """Attributes dict with a ``zarr_conventions`` array."""
 
-    zarr_conventions: tuple[ConventionMetadataObject, ...]
+    zarr_conventions: Sequence[ConventionMetadataObject]
+
+
+def validate_json_value(value: object) -> JsonValue:
+    """Validate and return a JSON-shaped value."""
+    if value is None or isinstance(value, bool | int | float | str):
+        return value
+    if _is_mapping(value):
+        return validate_json_object(value)
+    if _is_sequence(value):
+        return [validate_json_value(item) for item in value]
+    msg = f"expected a JSON value, got {type(value).__name__}"
+    raise TypeError(msg)
+
+
+def validate_json_object(value: object) -> JsonDict:
+    """Validate and return a mutable JSON object with string keys."""
+    if not _is_mapping(value):
+        msg = f"expected a JSON object, got {type(value).__name__}"
+        raise TypeError(msg)
+    result: JsonDict = {}
+    for key, item in value.items():
+        if not isinstance(key, str):
+            msg = f"expected JSON object keys to be str, got {type(key).__name__}"
+            raise TypeError(msg)
+        result[key] = validate_json_value(item)
+    return result
+
+
+def validate_convention_metadata_objects(
+    value: object,
+) -> list[ConventionMetadataObject]:
+    """Validate a ``zarr_conventions`` value."""
+    if value is None:
+        return []
+    if not _is_sequence(value):
+        msg = "zarr_conventions must be an array of convention metadata objects"
+        raise TypeError(msg)
+
+    result: list[ConventionMetadataObject] = []
+    for item in value:
+        obj = validate_json_object(item)
+        cmo = ConventionMetadataObject()
+        for key in ("uuid", "schema_url", "spec_url", "name", "description"):
+            if key not in obj:
+                continue
+            field = obj[key]
+            if not isinstance(field, str):
+                msg = f"ConventionMetadataObject field {key!r} must be a string"
+                raise TypeError(msg)
+            cmo[key] = field
+        result.append(cmo)
+    return result
 
 
 def validate_convention_metadata_object(cmo: JsonDict) -> None:
@@ -37,9 +108,9 @@ def validate_convention_metadata_object(cmo: JsonDict) -> None:
 
 
 def insert_convention(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     cmo: ConventionMetadataObject,
-    convention_data: JsonDict,
+    convention_data: Mapping[str, JsonValue],
     *,
     overwrite: bool = False,
 ) -> JsonDict:
@@ -67,20 +138,15 @@ def insert_convention(
             msg = f"attrs already contains keys that would be overwritten by convention data: {sorted(collisions)}. Pass overwrite=True to allow."
             raise ValueError(msg)
     result = {**attrs, **convention_data}
-    existing: list[ConventionMetadataObject] = list(
-        typing.cast(
-            "typing.Iterable[ConventionMetadataObject]",
-            result.get("zarr_conventions", ()),
-        )
-    )
+    existing = validate_convention_metadata_objects(result.get("zarr_conventions"))
     if cmo not in existing:
         existing.append(cmo)
-    result["zarr_conventions"] = typing.cast("JsonType", existing)
+    result["zarr_conventions"] = existing
     return result
 
 
 def extract_convention(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     convention_keys: set[str],
     match_fn: Callable[[ConventionMetadataObject], bool],
 ) -> tuple[JsonDict, JsonDict]:
@@ -101,18 +167,18 @@ def extract_convention(
         else:
             remaining[key] = value
 
-    old_conventions = typing.cast(
-        "typing.Iterable[ConventionMetadataObject]", attrs.get("zarr_conventions", ())
+    old_conventions = validate_convention_metadata_objects(
+        attrs.get("zarr_conventions")
     )
     new_conventions = [cmo for cmo in old_conventions if not match_fn(cmo)]
     if new_conventions:
-        remaining["zarr_conventions"] = typing.cast("JsonType", new_conventions)
+        remaining["zarr_conventions"] = new_conventions
 
     return remaining, convention_data
 
 
 def resolve_revision_label(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     uuid: str,
     schema_url_by_revision: dict[str, str],
     convention_name: str,
@@ -127,10 +193,7 @@ def resolve_revision_label(
     """
     present = any(
         cmo.get("uuid") == uuid
-        for cmo in typing.cast(
-            "typing.Iterable[ConventionMetadataObject]",
-            attrs.get("zarr_conventions", ()),
-        )
+        for cmo in validate_convention_metadata_objects(attrs.get("zarr_conventions"))
     )
     if not present:
         msg = f"convention {convention_name!r} is not present in attrs"
@@ -139,7 +202,7 @@ def resolve_revision_label(
 
 
 def detect_revision(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     uuid: str,
     schema_url_by_revision: dict[str, str],
 ) -> str | None:
@@ -156,9 +219,9 @@ def detect_revision(
     ``schema_url`` values; if two share one, the inverse mapping is ambiguous.
     """
     by_url = {url: label for label, url in schema_url_by_revision.items()}
-    for cmo in typing.cast(
-        "typing.Iterable[ConventionMetadataObject]", attrs.get("zarr_conventions", ())
-    ):
+    for cmo in validate_convention_metadata_objects(attrs.get("zarr_conventions")):
         if cmo.get("uuid") == uuid:
-            return by_url.get(cmo.get("schema_url", ""))
+            schema_url = cmo.get("schema_url")
+            if isinstance(schema_url, str):
+                return by_url.get(schema_url)
     return None

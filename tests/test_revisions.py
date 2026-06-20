@@ -75,11 +75,11 @@ def test_validate_observably_differs_by_detected_revision() -> None:
     _r, extracted = spatial.extract(attrs)  # auto-detects r1
 
     # r1 accepts 3D
-    spatial.validate(dict(extracted), revision="r1")  # must not raise
+    spatial.validate(extracted, revision="r1")  # must not raise
 
     # r2 rejects 3D — confirms the two revisions genuinely differ
     with pytest.raises(ValueError, match="exactly 2 items"):
-        spatial.validate(dict(extracted), revision="r2")
+        spatial.validate(extracted, revision="r2")
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ def test_spatial_validate_autodetects_r1() -> None:
     # extract auto-detects r1 (allows 3D); validating the extracted data with the
     # detected revision must not raise.
     _r, extracted = spatial.extract(attrs)
-    spatial.validate(dict(extracted), revision="r1")  # r1 allows 3D
+    spatial.validate(extracted, revision="r1")  # r1 allows 3D
 
 
 def test_spatial_extract_detects_latest() -> None:

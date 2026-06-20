@@ -5,7 +5,7 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_mapping, as_sequence, wrap_attrs
 
 from zarr_cm import uom
 from zarr_cm.uom import CMO, UomAttrs
@@ -17,20 +17,24 @@ SCHEMA = json.loads(SCHEMA_PATH.read_text())
 def test_insert_uom_with_unit() -> None:
     data: UomAttrs = {"ucum": {"unit": "kg", "version": "2.2"}}
     result = uom.insert({}, data)
-    assert result["uom"]["ucum"]["unit"] == "kg"
+    uom_data = as_mapping(result["uom"])
+    ucum = as_mapping(uom_data["ucum"])
+    assert ucum["unit"] == "kg"
     assert result["zarr_conventions"] == [CMO]
 
 
 def test_insert_uom_minimal() -> None:
     data: UomAttrs = {"ucum": {}}
     result = uom.insert({}, data)
-    assert result["uom"]["ucum"] == {}
+    uom_data = as_mapping(result["uom"])
+    assert uom_data["ucum"] == {}
 
 
 def test_insert_uom_with_description() -> None:
     data: UomAttrs = {"ucum": {"unit": "m/s2"}, "description": "Acceleration"}
     result = uom.insert({}, data)
-    assert result["uom"]["description"] == "Acceleration"
+    uom_data = as_mapping(result["uom"])
+    assert uom_data["description"] == "Acceleration"
 
 
 def test_insert_preserves_existing_attrs() -> None:
@@ -44,7 +48,7 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: UomAttrs = {"ucum": {"unit": "kg"}}
     result = uom.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
+    assert len(as_sequence(result["zarr_conventions"])) == 2
 
 
 def test_extract_uom() -> None:

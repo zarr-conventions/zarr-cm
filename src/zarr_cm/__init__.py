@@ -7,10 +7,13 @@ zarr-cm: Python implementation of Zarr Conventions Metadata
 from __future__ import annotations
 
 import typing
-from typing import Final, Literal, NotRequired, Protocol, TypedDict, cast
+from collections.abc import Sequence
+from typing import Final, Literal, NamedTuple, NotRequired
+
+from typing_extensions import TypedDict
 
 if typing.TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
 
 from . import license as license_
 from . import multiscales, proj, spatial, uom
@@ -18,7 +21,10 @@ from ._core import (
     ConventionAttrs,
     ConventionMetadataObject,
     JsonDict,
+    JsonValue,
     validate_convention_metadata_object,
+    validate_convention_metadata_objects,
+    validate_json_object,
 )
 from ._version import version as __version__
 from .geo_proj import (
@@ -61,25 +67,62 @@ from .uom import UCUM, UomAttrs, UomConventionAttrs
 ConventionName = Literal["geo-proj", "spatial", "multiscales", "license", "uom"]
 
 
-class _ConventionModule(Protocol):
+class _ConventionModule(NamedTuple):
     UUID: str
     CONVENTION_KEYS: set[str]
     validate: typing.Callable[..., object]
     insert: typing.Callable[..., JsonDict]
     extract: typing.Callable[..., tuple[JsonDict, object]]
-    detect: typing.Callable[[JsonDict], str | None]
-
-
-class _RevisionedConventionModule(_ConventionModule, Protocol):
-    _resolve_read_revision: typing.Callable[[JsonDict, str | None], str]
+    detect: typing.Callable[[Mapping[str, JsonValue]], str | None]
+    resolve_read_revision: (
+        typing.Callable[[Mapping[str, JsonValue], str | None], str] | None
+    ) = None
 
 
 _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
-    "geo-proj": cast("_ConventionModule", proj),
-    "spatial": cast("_ConventionModule", spatial),
-    "multiscales": cast("_ConventionModule", multiscales),
-    "license": cast("_ConventionModule", license_),
-    "uom": cast("_ConventionModule", uom),
+    "geo-proj": _ConventionModule(
+        proj.UUID,
+        proj.CONVENTION_KEYS,
+        proj.validate,
+        proj.insert,
+        proj.extract,
+        proj.detect,
+        proj._resolve_read_revision,  # pylint: disable=protected-access
+    ),
+    "spatial": _ConventionModule(
+        spatial.UUID,
+        spatial.CONVENTION_KEYS,
+        spatial.validate,
+        spatial.insert,
+        spatial.extract,
+        spatial.detect,
+        spatial._resolve_read_revision,  # pylint: disable=protected-access
+    ),
+    "multiscales": _ConventionModule(
+        multiscales.UUID,
+        multiscales.CONVENTION_KEYS,
+        multiscales.validate,
+        multiscales.insert,
+        multiscales.extract,
+        multiscales.detect,
+        multiscales._resolve_read_revision,  # pylint: disable=protected-access
+    ),
+    "license": _ConventionModule(
+        license_.UUID,
+        license_.CONVENTION_KEYS,
+        license_.validate,
+        license_.insert,
+        license_.extract,
+        license_.detect,
+    ),
+    "uom": _ConventionModule(
+        uom.UUID,
+        uom.CONVENTION_KEYS,
+        uom.validate,
+        uom.insert,
+        uom.extract,
+        uom.detect,
+    ),
 }
 
 CONVENTION_NAMES: Final = frozenset(_REGISTRY)
@@ -95,19 +138,17 @@ ALL_CONVENTION_KEYS: Final = frozenset(
 MultiConventionAttrs = TypedDict(
     "MultiConventionAttrs",
     {
-        "zarr_conventions": NotRequired[
-            list[ConventionMetadataObject] | tuple[ConventionMetadataObject, ...]
-        ],
+        "zarr_conventions": NotRequired[Sequence[ConventionMetadataObject]],
         # geo-proj
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JsonDict],
         # spatial
-        "spatial:dimensions": NotRequired[list[str] | tuple[str, ...]],
-        "spatial:bbox": NotRequired[list[float] | tuple[float, ...]],
+        "spatial:dimensions": NotRequired[Sequence[str]],
+        "spatial:bbox": NotRequired[Sequence[float]],
         "spatial:transform_type": NotRequired[str],
-        "spatial:transform": NotRequired[list[float] | tuple[float, ...]],
-        "spatial:shape": NotRequired[list[int] | tuple[int, ...]],
+        "spatial:transform": NotRequired[Sequence[float]],
+        "spatial:shape": NotRequired[Sequence[int]],
         "spatial:registration": NotRequired[str],
         # multiscales
         "multiscales": NotRequired[MultiscalesAttrs],
@@ -116,6 +157,7 @@ MultiConventionAttrs = TypedDict(
         # uom
         "uom": NotRequired[UomAttrs],
     },
+    extra_items=JsonValue,
 )
 
 
@@ -140,7 +182,7 @@ def _rev_kwargs(
     document to detect from, so without an explicit override the module's own
     default (LATEST) applies.
     """
-    if revisions and name in revisions and hasattr(mod, "_REVISIONS"):
+    if revisions and name in revisions and mod.resolve_read_revision is not None:
         return {"revision": revisions[name]}
     return {}
 
@@ -149,7 +191,7 @@ def _read_rev_kwargs(
     mod: _ConventionModule,
     revisions: dict[ConventionName, str] | None,
     name: ConventionName,
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> dict[str, str]:
     """Resolve the revision for a READ over *attrs* and return it as kwargs.
 
@@ -159,30 +201,22 @@ def _read_rev_kwargs(
     document detected as (say) r1 is not re-detected as LATEST after ``extract``
     has stripped its ``zarr_conventions`` entry.
     """
-    if not hasattr(mod, "_REVISIONS"):
+    if mod.resolve_read_revision is None:
         return {}
     if revisions and name in revisions:
         return {"revision": revisions[name]}
-    # The aggregate layer is a privileged consumer of a revisioned convention's
-    # read-revision resolver; it is internal to the package, not third-party.
-    revisioned = cast("_RevisionedConventionModule", mod)
-    return {
-        "revision": revisioned._resolve_read_revision(attrs, None)  # pylint: disable=protected-access
-    }
+    return {"revision": mod.resolve_read_revision(attrs, None)}
 
 
-def _detect_conventions(attrs: JsonDict) -> frozenset[ConventionName]:
+def _detect_conventions(attrs: Mapping[str, JsonValue]) -> frozenset[ConventionName]:
     """Identify which conventions are present by matching UUIDs in zarr_conventions."""
-    conventions = cast(
-        "typing.Iterable[ConventionMetadataObject]",
-        attrs.get("zarr_conventions", ()),
-    )
+    conventions = validate_convention_metadata_objects(attrs.get("zarr_conventions"))
     uuids = {cmo.get("uuid") for cmo in conventions}
     return frozenset(name for name, mod in _REGISTRY.items() if mod.UUID in uuids)
 
 
 def create_many(
-    conventions: dict[ConventionName, JsonDict],
+    conventions: Mapping[ConventionName, Mapping[str, JsonValue]],
     *,
     revisions: dict[ConventionName, str] | None = None,
 ) -> JsonDict:
@@ -214,11 +248,11 @@ def create_many(
 
 
 def validate_many(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     conventions: Iterable[ConventionName],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> JsonDict:
+) -> Mapping[str, JsonValue]:
     """Validate multiple conventions within an attributes dict.
 
     Parameters
@@ -241,13 +275,13 @@ def validate_many(
         mod = _get_module(name)
         rk = _read_rev_kwargs(mod, revisions, name, attrs)
         _, extracted = mod.extract(attrs, **rk)
-        mod.validate(dict(cast("JsonDict", extracted)), **rk)
+        mod.validate(validate_json_object(extracted), **rk)
     return attrs
 
 
 def insert_many(
-    attrs: JsonDict,
-    conventions: dict[ConventionName, JsonDict],
+    attrs: Mapping[str, JsonValue],
+    conventions: Mapping[ConventionName, Mapping[str, JsonValue]],
     *,
     overwrite: bool = False,
     revisions: dict[ConventionName, str] | None = None,
@@ -273,7 +307,7 @@ def insert_many(
     JsonDict
         A new attributes dict with all convention data merged in.
     """
-    result = attrs
+    result = dict(attrs)
     for name, data in conventions.items():
         mod = _get_module(name)
         rk = _rev_kwargs(mod, revisions, name)
@@ -283,7 +317,7 @@ def insert_many(
 
 
 def extract_many(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     conventions: Iterable[ConventionName],
     *,
     revisions: dict[ConventionName, str] | None = None,
@@ -307,21 +341,21 @@ def extract_many(
         ``(remaining_attrs, extracted)`` where *extracted* maps
         convention names to their convention data dicts.
     """
-    remaining = attrs
+    remaining = dict(attrs)
     extracted: dict[ConventionName, JsonDict] = {}
     for name in conventions:
         mod = _get_module(name)
         rk = _read_rev_kwargs(mod, revisions, name, remaining)
         remaining, data = mod.extract(remaining, **rk)
-        extracted[name] = dict(cast("JsonDict", data))
+        extracted[name] = validate_json_object(data)
     return remaining, extracted
 
 
 def validate_all(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> JsonDict:
+) -> Mapping[str, JsonValue]:
     """Validate all detected conventions within an attributes dict.
 
     Detects which conventions are present by matching UUIDs in
@@ -345,7 +379,7 @@ def validate_all(
 
 
 def extract_all(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
     *,
     revisions: dict[ConventionName, str] | None = None,
 ) -> tuple[JsonDict, dict[ConventionName, JsonDict]]:
@@ -373,7 +407,7 @@ def extract_all(
 
 
 def detect_revisions(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> dict[ConventionName, str | None]:
     """Map each present convention to the revision label it claims.
 
@@ -403,6 +437,8 @@ __all__ = [
     "GeoProjConventionAttrsR1",
     "GeoProjConventionAttrsR2",
     "GeoProjConventionAttrsR3",
+    "JsonDict",
+    "JsonValue",
     "LayoutObject",
     "LayoutObjectR1",
     "LayoutObjectR2",

@@ -5,9 +5,9 @@ from pathlib import Path
 
 import jsonschema
 import pytest
-from conftest import wrap_attrs
+from conftest import as_sequence, wrap_attrs
 
-from zarr_cm import geo_proj
+from zarr_cm import JsonDict, geo_proj
 from zarr_cm.geo_proj import CMO, GeoProjAttrs
 
 SCHEMA_PATH = Path(__file__).parent / "schemas" / "geo-proj.json"
@@ -39,9 +39,10 @@ def test_insert_appends_to_existing_conventions() -> None:
     attrs = {"zarr_conventions": [{"uuid": "other-uuid"}]}
     data: GeoProjAttrs = {"proj:code": "EPSG:4326"}
     result = geo_proj.insert(attrs, data)
-    assert len(result["zarr_conventions"]) == 2
-    assert result["zarr_conventions"][0] == {"uuid": "other-uuid"}
-    assert result["zarr_conventions"][1] == CMO
+    conventions = as_sequence(result["zarr_conventions"])
+    assert len(conventions) == 2
+    assert conventions[0] == {"uuid": "other-uuid"}
+    assert conventions[1] == CMO
 
 
 def test_extract_geo_proj() -> None:
@@ -126,7 +127,7 @@ def test_create_wkt2() -> None:
 
 
 def test_create_projjson() -> None:
-    pj = {"type": "GeographicCRS"}
+    pj: JsonDict = {"type": "GeographicCRS"}
     result = geo_proj.create(projjson=pj)
     assert result == {"proj:projjson": pj}
 

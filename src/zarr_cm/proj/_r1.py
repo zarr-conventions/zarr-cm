@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Final, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Final, NotRequired
+
+from typing_extensions import TypedDict
+
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
 from zarr_cm._core import (
     ConventionMetadataObject,
     JsonDict,
+    JsonValue,
     extract_convention,
     insert_convention,
 )
@@ -18,6 +24,7 @@ GeoProjAttrs = TypedDict(
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JsonDict],
     },
+    extra_items=JsonValue,
 )
 
 GeoProjConventionAttrs = TypedDict(
@@ -28,6 +35,7 @@ GeoProjConventionAttrs = TypedDict(
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JsonDict],
     },
+    extra_items=JsonValue,
 )
 
 UUID: Final = "f17cb550-5864-4468-aeb7-f3180cfb622f"
@@ -59,19 +67,19 @@ def create(
         result["proj:wkt2"] = wkt2
     if projjson is not None:
         result["proj:projjson"] = projjson
-    validate(dict(cast("JsonDict", result)))
+    validate(result)
     return result
 
 
-def insert(attrs: JsonDict, data: GeoProjAttrs, *, overwrite: bool = False) -> JsonDict:
+def insert(
+    attrs: Mapping[str, JsonValue], data: GeoProjAttrs, *, overwrite: bool = False
+) -> JsonDict:
     """Insert geo-proj convention metadata into an attributes dict."""
-    return insert_convention(
-        attrs, CMO, dict(cast("JsonDict", data)), overwrite=overwrite
-    )
+    return insert_convention(attrs, CMO, data, overwrite=overwrite)
 
 
 def extract(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> tuple[JsonDict, GeoProjAttrs]:
     """Extract geo-proj convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
@@ -82,7 +90,7 @@ def extract(
     return remaining, GeoProjAttrs(**convention_data)  # type: ignore[typeddict-item]
 
 
-def validate(data: JsonDict) -> GeoProjAttrs:
+def validate(data: Mapping[str, JsonValue]) -> GeoProjAttrs:
     """Validate geo-proj convention data.
 
     Exactly one of ``proj:code``, ``proj:wkt2``, or ``proj:projjson``

@@ -1,20 +1,33 @@
 from __future__ import annotations
 
-import zarr_cm
+from zarr_cm import license as license_
+from zarr_cm import multiscales, proj, spatial, uom
 from zarr_cm._contract import ConventionModule
 
 
 def _dispatch_targets() -> list[tuple[str, object]]:
-    """Every module the package actually dispatches to: each registry module,
-    plus every revision submodule of a revisioned convention."""
+    """Every module the package actually dispatches to: each non-revisioned
+    convention module, plus every revision submodule of a revisioned convention.
+
+    Revisioned conventions expose their per-revision submodules as public
+    ``r1``/``r2``/... namespaces (the underlying modules that carry the full
+    convention surface); ``_REVISIONS`` holds thin dispatch wrappers, not the
+    modules, so we discover the public revision namespaces here instead."""
     targets: list[tuple[str, object]] = []
-    for name, mod in zarr_cm._REGISTRY.items():
+    for name, mod in (
+        ("geo-proj", proj),
+        ("spatial", spatial),
+        ("multiscales", multiscales),
+        ("license", license_),
+        ("uom", uom),
+    ):
         revisions = getattr(mod, "_REVISIONS", None)
         if revisions is None:
             targets.append((name, mod))
         else:
-            for label, rev_mod in revisions.items():
-                targets.append((f"{name}:{label}", rev_mod))
+            targets.extend(
+                (f"{name}:{label}", getattr(mod, label)) for label in revisions
+            )
     return targets
 
 

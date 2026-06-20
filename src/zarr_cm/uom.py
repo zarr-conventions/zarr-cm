@@ -2,32 +2,38 @@
 
 from __future__ import annotations
 
-from typing import Final, NotRequired, TypedDict, cast
+from typing import TYPE_CHECKING, Final, NotRequired
+
+from typing_extensions import TypedDict
 
 from zarr_cm._core import (
     ConventionMetadataObject,
     JsonDict,
+    JsonValue,
     extract_convention,
     insert_convention,
     resolve_revision_label,
 )
 
+if TYPE_CHECKING:
+    from collections.abc import Mapping
 
-class UCUM(TypedDict):
+
+class UCUM(TypedDict, extra_items=JsonValue):
     """Unified Code for Units of Measurement information."""
 
     unit: NotRequired[str]
     version: NotRequired[str]
 
 
-class UomAttrs(TypedDict):
+class UomAttrs(TypedDict, extra_items=JsonValue):
     """Unit of measurement metadata for a Zarr array."""
 
     ucum: UCUM
     description: NotRequired[str]
 
 
-class UomConventionAttrs(TypedDict):
+class UomConventionAttrs(TypedDict, extra_items=JsonValue):
     """Attributes dict containing uom convention metadata."""
 
     zarr_conventions: tuple[ConventionMetadataObject, ...]
@@ -51,7 +57,7 @@ CONVENTION_KEYS: Final = {"uom"}
 _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 
 
-def detect(attrs: JsonDict) -> str | None:
+def detect(attrs: Mapping[str, JsonValue]) -> str | None:
     """Return the revision label this document claims for the uom convention.
 
     Uom has a single revision (``"v1"``); returns it when present with the
@@ -70,22 +76,24 @@ def create(
     result = UomAttrs(ucum=ucum)
     if description is not None:
         result["description"] = description
-    validate(dict(cast("JsonDict", result)))
+    validate(result)
     return result
 
 
-def insert(attrs: JsonDict, data: UomAttrs, *, overwrite: bool = False) -> JsonDict:
+def insert(
+    attrs: Mapping[str, JsonValue], data: UomAttrs, *, overwrite: bool = False
+) -> JsonDict:
     """Insert uom convention metadata into an attributes dict."""
     return insert_convention(
         attrs,
         CMO,
-        {"uom": dict(cast("JsonDict", data))},
+        {"uom": data},
         overwrite=overwrite,
     )
 
 
 def extract(
-    attrs: JsonDict,
+    attrs: Mapping[str, JsonValue],
 ) -> tuple[JsonDict, UomAttrs]:
     """Extract uom convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
@@ -101,7 +109,7 @@ def extract(
     return remaining, UomAttrs(**convention_data["uom"])  # type: ignore[typeddict-item]
 
 
-def validate(data: JsonDict) -> UomAttrs:
+def validate(data: Mapping[str, JsonValue]) -> UomAttrs:
     """Validate uom convention data.
 
     ``ucum`` must be present.
