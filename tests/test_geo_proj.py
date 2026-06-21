@@ -10,7 +10,9 @@ from conftest import as_sequence, wrap_attrs
 from zarr_cm import JsonDict, geo_proj
 from zarr_cm.geo_proj import CMO, GeoProjAttrs
 
-SCHEMA_PATH = Path(__file__).parent / "schemas" / "geo-proj.json"
+# geo_proj is a backward-compat shim that re-exports the latest proj revision
+# (r3), so its emitted documents are validated against the r3 vendored schema.
+SCHEMA_PATH = Path(__file__).parent / "schemas" / "proj-r3.json"
 SCHEMA = json.loads(SCHEMA_PATH.read_text())
 
 

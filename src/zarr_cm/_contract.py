@@ -59,21 +59,19 @@ class ConventionModule(Protocol):
 if TYPE_CHECKING:
     from . import license as _license
     from . import uom as _uom
-    from .multiscales import _r1 as _multiscales_r1
     from .multiscales import _r2 as _multiscales_r2
-    from .proj import _r1 as _proj_r1
     from .proj import _r2 as _proj_r2
-    from .spatial import _r1 as _spatial_r1
+    from .proj import _r3 as _proj_r3
     from .spatial import _r2 as _spatial_r2
+    from .spatial import _r3 as _spatial_r3
 
     # Each dispatch target must satisfy ConventionModule. A signature/constant
     # drift in any of these fails `pyright src/` at the corresponding line.
     # Adding a convention or revision means adding one line here.
-    _check_spatial_r1: ConventionModule = _spatial_r1
     _check_spatial_r2: ConventionModule = _spatial_r2
-    _check_proj_r1: ConventionModule = _proj_r1
+    _check_spatial_r3: ConventionModule = _spatial_r3
     _check_proj_r2: ConventionModule = _proj_r2
-    _check_multiscales_r1: ConventionModule = _multiscales_r1
+    _check_proj_r3: ConventionModule = _proj_r3
     _check_multiscales_r2: ConventionModule = _multiscales_r2
     _check_license: ConventionModule = _license
     _check_uom: ConventionModule = _uom

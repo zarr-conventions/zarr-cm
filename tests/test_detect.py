@@ -8,14 +8,14 @@ from zarr_cm import multiscales, proj, spatial, uom
 
 
 def test_spatial_detect_known_revisions() -> None:
-    r1 = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
-    )
     r2 = spatial.insert(
         {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
     )
-    assert spatial.detect(r1) == "r1"
+    r3 = spatial.insert(
+        {}, spatial.create(dimensions=["y", "x"], revision="r3"), revision="r3"
+    )
     assert spatial.detect(r2) == "r2"
+    assert spatial.detect(r3) == "r3"
 
 
 def test_spatial_detect_unknown_revision_returns_none() -> None:
@@ -37,10 +37,10 @@ def test_spatial_detect_absent_raises() -> None:
 
 
 def test_proj_detect_known_revisions() -> None:
-    r1 = proj.insert({}, proj.create(code="EPSG:4326", revision="r1"), revision="r1")
     r2 = proj.insert({}, proj.create(code="EPSG:4326", revision="r2"), revision="r2")
-    assert proj.detect(r1) == "r1"
+    r3 = proj.insert({}, proj.create(code="EPSG:4326", revision="r3"), revision="r3")
     assert proj.detect(r2) == "r2"
+    assert proj.detect(r3) == "r3"
 
 
 def test_proj_detect_absent_raises() -> None:
@@ -50,14 +50,14 @@ def test_proj_detect_absent_raises() -> None:
 
 def test_detect_revisions_aggregate() -> None:
     attrs = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+        {}, spatial.create(dimensions=["y", "x"], revision="r3"), revision="r3"
     )
     attrs = proj.insert(
         attrs, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
     )
     attrs = multiscales.insert(attrs, multiscales.create(layout=[{"asset": "0"}]))
     result = zarr_cm.detect_revisions(attrs)
-    assert result == {"spatial": "r1", "geo-proj": "r2", "multiscales": "r2"}
+    assert result == {"spatial": "r3", "geo-proj": "r2", "multiscales": "r2"}
 
 
 def test_detect_revisions_empty() -> None:

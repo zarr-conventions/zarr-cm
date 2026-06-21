@@ -26,7 +26,7 @@ def workflow_create() -> dict[str, Any]:
 def workflow_read_unknown() -> None:
     """2. Read data written under an older or unrecognized revision."""
     old_doc = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+        {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
     )
     rev = spatial.detect(old_doc)
     print(f"[read] detected revision {rev!r} for the stored document")
@@ -42,30 +42,18 @@ def workflow_read_unknown() -> None:
 
 
 def workflow_migrate() -> None:
-    """Migrate spatial data from r1 to the latest revision (strict 2D)."""
-    # Case A: a 2D r1 document migrates cleanly to the latest revision.
-    doc_2d = spatial.insert(
-        {}, spatial.create(dimensions=["y", "x"], revision="r1"), revision="r1"
-    )
-    _, old = spatial.extract(doc_2d, revision=spatial.detect(doc_2d))
-    migrated = spatial.insert({}, spatial.create(dimensions=old["spatial:dimensions"]))
-    print(f"[migrate] 2D r1 -> {spatial.detect(migrated)} OK")
+    """Migrate spatial data from r2 to the latest revision (r3).
 
-    # Case B: a 3D r1 document CANNOT migrate to the latest (strict-2D) revision.
-    doc_3d = spatial.insert(
-        {}, spatial.create(dimensions=["z", "y", "x"], revision="r1"), revision="r1"
+    r2 and r3 share the same strict-2D data shape; the migration re-stamps the
+    document with the latest revision's identity (its commit-pinned schema_url).
+    """
+    doc = spatial.insert(
+        {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
     )
-    _, old3 = spatial.extract(doc_3d, revision=spatial.detect(doc_3d))
-    try:
-        spatial.create(dimensions=old3["spatial:dimensions"])  # latest rejects 3D
-    except ValueError as exc:
-        print(f"[migrate] 3D r1 -> latest is lossy and was refused: {exc}")
-        xy = old3["spatial:dimensions"][-2:]
-        dropped = spatial.insert({}, spatial.create(dimensions=xy))
-        print(
-            f"[migrate] ... dropped leading axis -> {dropped['spatial:dimensions']} "
-            f"({spatial.detect(dropped)})"
-        )
+    src_rev = spatial.detect(doc)
+    _, old = spatial.extract(doc, revision=src_rev)
+    migrated = spatial.insert({}, spatial.create(dimensions=old["spatial:dimensions"]))
+    print(f"[migrate] {src_rev} -> {spatial.detect(migrated)} OK")
 
 
 if __name__ == "__main__":

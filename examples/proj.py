@@ -11,7 +11,7 @@ from zarr_cm import proj
 
 
 def workflow_create() -> dict[str, Any]:
-    """1. Create new data complying with the latest proj revision (r2)."""
+    """1. Create new data complying with the latest proj revision (r3)."""
     attrs = proj.insert({}, proj.create(code="EPSG:4326"))
     print(f"[create] wrote latest proj data; revision = {proj.detect(attrs)}")
     return attrs
@@ -20,7 +20,7 @@ def workflow_create() -> dict[str, Any]:
 def workflow_read_unknown() -> None:
     """2. Read data written under an older or unrecognized revision."""
     old_doc = proj.insert(
-        {}, proj.create(code="EPSG:4326", revision="r1"), revision="r1"
+        {}, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
     )
     rev = proj.detect(old_doc)
     print(f"[read] detected revision {rev!r}")
@@ -34,9 +34,9 @@ def workflow_read_unknown() -> None:
 
 
 def workflow_migrate() -> None:
-    """3. Migrate proj data r1 -> latest (same fields; URLs + relaxed rules)."""
+    """3. Migrate proj data r2 -> latest (same fields; URLs + relaxed rules)."""
     old_doc = proj.insert(
-        {}, proj.create(code="EPSG:4326", revision="r1"), revision="r1"
+        {}, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
     )
     src = proj.detect(old_doc)
     _, old = proj.extract(old_doc, revision=src)

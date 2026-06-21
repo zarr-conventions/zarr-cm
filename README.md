@@ -104,3 +104,37 @@ print(extracted)
 ```
 
 <!-- blacken-docs:on -->
+
+## Convention revisions
+
+Upstream Zarr conventions sometimes change their field shapes **in place** —
+keeping the same `uuid` but altering required keys and cardinalities. To let you
+both author data at the current spec and still read data written against an
+earlier draft, the revisioned conventions (`spatial`, `proj`, `multiscales`)
+expose package-local revision labels ordered oldest → newest. Today `spatial`
+and `proj` ship `r2` and `r3`, while `multiscales` ships only `r2`; more are
+added as upstream conventions evolve.
+
+Each revision pins its emitted `schema_url`/`spec_url` to the **upstream commit
+SHA** it was snapshotted from, so a written document is self-describing: the
+`uuid` says _which_ convention, and the pinned `schema_url` says _which_
+revision. Writes default to the latest revision; reads auto-detect the revision
+from the document's `schema_url` (overridable with a `revision=` argument).
+
+### Why there is no `r1`
+
+The revision labels start at `r2`, not `r1`. Earlier drafts of `spatial`,
+`proj`, and `multiscales` did exist, but the only `schema_url` they could carry
+was upstream's `refs/tags/v1/schema.json` — and **that tag was never published**
+on any of these repositories (their first and only release tag is `v0.1`). That
+URL has therefore always returned `404`, which is non-conformant with the Zarr
+Conventions spec's requirement that `schema_url` resolve to the convention's
+schema. For `multiscales` the draft was worse than dangling: its schema
+`const`-requires the `refs/tags/v1` URL, so **no** `schema_url` value could both
+resolve _and_ validate.
+
+Rather than ship a revision whose self-describing URL is permanently broken,
+`r1` was dropped from all three conventions. The surviving revisions keep their
+`r2`/`r3` labels (labels are package-local and never appear in emitted
+documents, so renumbering would only churn the public type names without
+changing behavior).
