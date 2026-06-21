@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import sys
 from collections.abc import Mapping, Sequence
 from typing import TYPE_CHECKING, NotRequired, TypeGuard
 
-from typing_extensions import TypedDict
+from typing_extensions import TypeAliasType, TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -17,9 +18,24 @@ JsonPrimitive = bool | int | float | str | None
 # ``json.loads`` produces and what ``json.dumps``/jsonschema expect); the
 # ``Sequence`` arm just declines to *require* a particular container at the type
 # level so both lists and tuples type-check.
-JsonValue = JsonPrimitive | Sequence["JsonValue"] | Mapping[str, "JsonValue"]
-# Mutable build type for constructing attribute dicts.
-JsonDict = dict[str, JsonValue]
+#
+# ``JsonValue`` is a *recursive* alias and MUST be a real ``TypeAliasType`` (the
+# PEP 695 ``type`` form), not a bare ``X = ... "X" ...`` union: the convention
+# ``TypedDict``s use it as ``extra_items``, and a downstream pydantic model that
+# embeds one of those ``TypedDict``s would otherwise raise ``RecursionError`` in
+# ``model_rebuild()``. On Python 3.12+ we use the native ``type`` statement (from
+# ``_json_alias``, which pyright resolves cleanly); on 3.11 -- where ``type`` is a
+# syntax error -- we fall back to the runtime-equivalent ``TypeAliasType``. The
+# project type-checks at ``pythonVersion = 3.12`` so the native form is the one
+# pyright sees. See https://github.com/zarr-conventions/zarr-cm/issues/18.
+if sys.version_info >= (3, 12):
+    from ._json_alias import JsonDict, JsonValue
+else:  # pragma: no cover - exercised only on Python 3.11
+    JsonValue = TypeAliasType(
+        "JsonValue",
+        JsonPrimitive | Sequence["JsonValue"] | Mapping[str, "JsonValue"],
+    )
+    JsonDict = TypeAliasType("JsonDict", dict[str, JsonValue])
 
 
 def _is_mapping(value: object) -> TypeGuard[Mapping[object, object]]:

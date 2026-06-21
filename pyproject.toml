@@ -50,6 +50,11 @@ test = [
   "pytest-cov >=7",
   "pytest-examples >=0.0.14",
   "jsonschema >=4",
+  # Downstream-integration regression: a pydantic model embedding a convention
+  # TypedDict must rebuild without RecursionError (see issue #18). Runs across
+  # the CI Python matrix so both the 3.12+ `type` alias and the 3.11
+  # TypeAliasType fallback are exercised.
+  "pydantic >=2",
 ]
 typecheck = [
   "pyright >=1.1.386",
@@ -103,7 +108,7 @@ report.exclude_also = [
 
 [tool.pyright]
 include = ["src", "tests"]
-pythonVersion = "3.11"
+pythonVersion = "3.12"
 typeCheckingMode = "strict"
 reportPrivateUsage = false
 # PEP 728 ``extra_items`` on TypedDicts is provisional in pyright and gated
@@ -113,6 +118,11 @@ enableExperimentalFeatures = true
 
 
 [tool.ruff]
+# _json_alias.py uses the PEP 695 ``type`` statement and is imported only on
+# Python 3.12+ (see zarr_cm/_core.py). Lint it as 3.12 so the ``type`` syntax is
+# accepted; the rest of the package keeps the project-wide 3.11 floor.
+[tool.ruff.per-file-target-version]
+"src/zarr_cm/_json_alias.py" = "py312"
 
 [tool.ruff.lint]
 extend-select = [
