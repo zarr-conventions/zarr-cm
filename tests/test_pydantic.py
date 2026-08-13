@@ -20,7 +20,8 @@ import pytest
 
 # Imported at runtime (not under TYPE_CHECKING): pydantic resolves these as live
 # field annotations during model_rebuild(), which is the whole point here.
-from zarr_cm import ConventionMetadataObject, SpatialAttrs  # noqa: TC001
+import zarr_cm
+from zarr_cm import ConventionMetadataObject, SpatialAttrs
 
 pydantic = pytest.importorskip("pydantic")
 BaseModel = pydantic.BaseModel
@@ -57,3 +58,48 @@ def test_model_with_convention_attrs_typeddict_rebuilds() -> None:
     Node.model_rebuild()  # used to raise RecursionError
     node = Node(attributes={"spatial:dimensions": ["y", "x"]})
     assert node.attributes.get("spatial:dimensions") == ["y", "x"]
+
+
+# Every public TypedDict, by module. A class-form TypedDict under
+# ``from __future__ import annotations`` stores its annotations as strings, so
+# every name they mention has to be importable at RUNTIME from the defining
+# module -- pydantic evaluates them in that module's namespace. Parking one of
+# them behind ``if TYPE_CHECKING:`` type-checks fine and then fails downstream,
+# which is what this test is here to catch.
+_TYPED_DICTS = [
+    (zarr_cm, "ConventionMetadataObject"),
+    (zarr_cm, "ConventionAttrs"),
+    (zarr_cm, "MultiConventionAttrs"),
+    (zarr_cm, "SpatialAttrs"),
+    (zarr_cm, "SpatialConventionAttrs"),
+    (zarr_cm, "SpatialAttrsR2"),
+    (zarr_cm, "SpatialConventionAttrsR2"),
+    (zarr_cm, "SpatialAttrsR3"),
+    (zarr_cm, "SpatialConventionAttrsR3"),
+    (zarr_cm, "GeoProjAttrs"),
+    (zarr_cm, "GeoProjConventionAttrs"),
+    (zarr_cm, "GeoProjAttrsR2"),
+    (zarr_cm, "GeoProjConventionAttrsR2"),
+    (zarr_cm, "GeoProjAttrsR3"),
+    (zarr_cm, "GeoProjConventionAttrsR3"),
+    (zarr_cm, "Transform"),
+    (zarr_cm, "LayoutObject"),
+    (zarr_cm, "MultiscalesAttrs"),
+    (zarr_cm, "MultiscalesConventionAttrs"),
+    (zarr_cm, "LicenseAttrs"),
+    (zarr_cm, "LicenseConventionAttrs"),
+    (zarr_cm, "UCUM"),
+    (zarr_cm, "UomAttrs"),
+    (zarr_cm, "UomConventionAttrs"),
+]
+
+
+@pytest.mark.parametrize("name", [name for _mod, name in _TYPED_DICTS])
+def test_every_public_typeddict_rebuilds(name: str) -> None:
+    """Every exported TypedDict must be usable as a pydantic model field."""
+    typed_dict = getattr(zarr_cm, name)
+
+    class M(BaseModel):
+        attributes: typed_dict  # type: ignore[valid-type]
+
+    M.model_rebuild()

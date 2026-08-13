@@ -6,12 +6,20 @@ Identical in shape to r1; pins the schema/spec URLs to the v0.1 release.
 
 from __future__ import annotations
 
+# Imported at runtime, not under TYPE_CHECKING: the class-form ``TypedDict``s
+# below store their annotations as strings (``from __future__ import
+# annotations``), and a downstream consumer that resolves them -- pydantic's
+# ``model_rebuild()``, ``typing.get_type_hints()`` -- evaluates those strings in
+# THIS module's namespace. A ``Sequence`` visible only to the type checker
+# type-checks fine and then raises ``NameError`` for that consumer.
+# See tests/test_pydantic.py::test_every_public_typeddict_rebuilds.
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final, NotRequired
 
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
-    from collections.abc import Mapping, Sequence
+    from collections.abc import Mapping
 
 from zarr_cm._core import (
     ConventionMetadataObject,

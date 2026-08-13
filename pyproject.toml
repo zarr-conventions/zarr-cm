@@ -177,6 +177,18 @@ ignore = [
 # Uncomment if using a _compat.typing backport
 # typing-modules = ["zarr_cm._compat.typing"]
 
+[tool.ruff.lint.flake8-type-checking]
+# The convention TypedDicts are class-form under `from __future__ import
+# annotations`, so their annotations are strings that a downstream consumer
+# (pydantic's model_rebuild, typing.get_type_hints) evaluates in the defining
+# module's namespace. Telling flake8-type-checking that TypedDict bases are
+# runtime-evaluated stops it from proposing to move those names into a
+# TYPE_CHECKING block, which would type-check and then break downstream.
+runtime-evaluated-base-classes = [
+  "typing_extensions.TypedDict",
+  "typing.TypedDict",
+]
+
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["T20"]
 "docs/examples/**" = ["T20"]
