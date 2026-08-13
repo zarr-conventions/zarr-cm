@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
@@ -44,7 +45,7 @@ class UomAttrs(TypedDict, extra_items=JsonValue):
 class UomConventionAttrs(TypedDict, extra_items=JsonValue):
     """Attributes dict containing uom convention metadata."""
 
-    zarr_conventions: tuple[ConventionMetadataObject, ...]
+    zarr_conventions: Sequence[ConventionMetadataObject]
     uom: UomAttrs
 
 
@@ -86,6 +87,24 @@ def create(
         result["description"] = description
     validate(result)
     return result
+
+
+def create_convention_attrs(
+    *,
+    ucum: UCUM,
+    description: str | None = None,
+) -> UomConventionAttrs:
+    """Create a stand-alone attributes dict carrying uom and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    return UomConventionAttrs(
+        zarr_conventions=[CMO],
+        uom=create(ucum=ucum, description=description),
+    )
 
 
 def insert(

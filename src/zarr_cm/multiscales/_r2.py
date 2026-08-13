@@ -109,6 +109,24 @@ def create(
     return result
 
 
+def create_convention_attrs(
+    *,
+    layout: tuple[LayoutObject, ...],
+    resampling_method: str | None = None,
+) -> MultiscalesConventionAttrs:
+    """Create a stand-alone attributes dict carrying multiscales and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    return MultiscalesConventionAttrs(
+        zarr_conventions=[CMO],
+        multiscales=create(layout=layout, resampling_method=resampling_method),
+    )
+
+
 def insert(
     attrs: Mapping[str, JsonValue], data: MultiscalesAttrs, *, overwrite: bool = False
 ) -> JsonDict:

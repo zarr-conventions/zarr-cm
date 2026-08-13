@@ -129,6 +129,36 @@ def create(
     return result
 
 
+def create_convention_attrs(
+    *,
+    dimensions: list[str] | tuple[str, ...] | None = None,
+    bbox: list[float] | tuple[float, ...] | None = None,
+    transform_type: str | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
+    registration: str | None = None,
+) -> SpatialConventionAttrs:
+    """Create a stand-alone attributes dict carrying spatial (r2) and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    result: SpatialConventionAttrs = {
+        "zarr_conventions": [CMO],
+        **create(
+            dimensions=dimensions,
+            bbox=bbox,
+            transform_type=transform_type,
+            transform=transform,
+            shape=shape,
+            registration=registration,
+        ),
+    }
+    return result
+
+
 def insert(
     attrs: Mapping[str, JsonValue], data: SpatialAttrs, *, overwrite: bool = False
 ) -> JsonDict:

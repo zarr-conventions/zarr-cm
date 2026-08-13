@@ -19,8 +19,9 @@ class ConventionModule(Protocol):
 
     Pins the dispatch surface: the constants ``UUID``/``SCHEMA_URL``/``SPEC_URL``/
     `CMO`/`CONVENTION_KEYS`, the attributes-level operations
-    `create`/`insert`/`extract`/`validate`, and the node-level operations
-    `validate_group_metadata`/`validate_array_metadata`/`validate_node_metadata`.
+    `create`/`create_convention_attrs`/`insert`/`extract`/`validate`, and the
+    node-level operations `validate_group_metadata`/`validate_array_metadata`/
+    `validate_node_metadata`.
     The callable signatures themselves are pinned by the typed dispatch protocols
     in the aggregate modules, while this structural protocol verifies each
     convention module exposes the shared names.
@@ -50,6 +51,8 @@ class ConventionModule(Protocol):
     # only assignable to an invariant ``object`` member via a covariant property.
     @property
     def create(self) -> object: ...
+    @property
+    def create_convention_attrs(self) -> object: ...
     @property
     def insert(self) -> object: ...
     @property

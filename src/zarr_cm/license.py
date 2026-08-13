@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
@@ -40,7 +41,7 @@ class LicenseAttrs(TypedDict, extra_items=JsonValue):
 class LicenseConventionAttrs(TypedDict, extra_items=JsonValue):
     """Attributes dict containing license convention metadata."""
 
-    zarr_conventions: tuple[ConventionMetadataObject, ...]
+    zarr_conventions: Sequence[ConventionMetadataObject]
     license: LicenseAttrs
 
 
@@ -95,6 +96,27 @@ def create(
         result["path"] = path
     validate(result)
     return result
+
+
+def create_convention_attrs(
+    *,
+    spdx: str | None = None,
+    url: str | None = None,
+    text: str | None = None,
+    file: str | None = None,
+    path: str | None = None,
+) -> LicenseConventionAttrs:
+    """Create a stand-alone attributes dict carrying license and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    return LicenseConventionAttrs(
+        zarr_conventions=[CMO],
+        license=create(spdx=spdx, url=url, text=text, file=file, path=path),
+    )
 
 
 def insert(

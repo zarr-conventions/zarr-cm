@@ -76,6 +76,7 @@ __all__ = [
     "Transform",
     "TransformR2",
     "create",
+    "create_convention_attrs",
     "detect",
     "extract",
     "insert",
@@ -93,6 +94,7 @@ class _RevisionModule(NamedTuple):
     insert: typing.Callable[..., JsonDict]
     validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
     extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
+    create_convention_attrs: typing.Callable[..., typing.Mapping[str, JsonValue]]
     validate_group_metadata: typing.Callable[..., object]
     validate_array_metadata: typing.Callable[..., object]
     validate_node_metadata: typing.Callable[..., object]
@@ -105,6 +107,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r2.insert,
         _r2.validate,
         _r2.extract,
+        _r2.create_convention_attrs,
         _r2.validate_group_metadata,
         _r2.validate_array_metadata,
         _r2.validate_node_metadata,
@@ -259,3 +262,33 @@ def validate_node_metadata(
     return validate_group_metadata(
         typing.cast("GroupMetadataInput", metadata), revision=revision
     )
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    layout: list[LayoutObjectR2] | tuple[LayoutObjectR2, ...],
+    resampling_method: str | None = None,
+) -> MultiscalesConventionAttrsR2: ...
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    layout: list[LayoutObjectR2] | tuple[LayoutObjectR2, ...],
+    resampling_method: str | None = None,
+    revision: str,
+) -> MultiscalesConventionAttrsR2: ...
+
+
+def create_convention_attrs(
+    *args: object, revision: str = LATEST, **kwargs: object
+) -> object:
+    """Create a stand-alone attributes dict carrying multiscales and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    return dict(_revision(revision).create_convention_attrs(*args, **kwargs))

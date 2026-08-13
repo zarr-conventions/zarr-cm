@@ -23,10 +23,15 @@ pip install zarr-cm
 
 Each convention module provides the following operations:
 
-- **`create`** creates convention metadata.
+- **`create`** creates convention metadata: the convention's own keys, nothing
+  else.
+- **`create_convention_attrs`** creates a complete stand-alone attributes dict:
+  that same convention data plus the `zarr_conventions` entry declaring it.
 - **`validate`** checks convention metadata for validity.
-- **`insert`** adds convention metadata to a Zarr attributes dict and returns a
-  new dict with a `zarr_conventions` entry.
+- **`insert`** composes: it adds convention metadata to an attributes dict that
+  already exists, returning a new dict with the `zarr_conventions` entry
+  appended. Reach for `create_convention_attrs` when there is nothing to compose
+  with.
 - **`extract`** removes convention metadata from an attributes dict and returns
   the remaining attributes and the extracted convention data.
 - **`validate_group_metadata`**, **`validate_array_metadata`** and
@@ -115,6 +120,11 @@ from zarr_cm import spatial
 footprint = spatial.create(bbox=[-180.0, -90.0, 180.0, 90.0])
 print(footprint)
 #> {'spatial:bbox': [-180.0, -90.0, 180.0, 90.0]}
+
+# As a complete attributes dict, declaring the convention it uses:
+attributes = spatial.create_convention_attrs(bbox=[-180.0, -90.0, 180.0, 90.0])
+print(sorted(attributes))
+#> ['spatial:bbox', 'zarr_conventions']
 ```
 
 <!-- blacken-docs:on -->
@@ -178,7 +188,7 @@ their input at the type it came in with.
 import zarr_cm
 from zarr_cm import spatial
 
-attributes = spatial.insert({}, spatial.create(bbox=[-180.0, -90.0, 180.0, 90.0]))
+attributes = spatial.create_convention_attrs(bbox=[-180.0, -90.0, 180.0, 90.0])
 
 # A group may carry a footprint with no dimensions.
 group = {"zarr_format": 3, "node_type": "group", "attributes": attributes}

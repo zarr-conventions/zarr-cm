@@ -73,6 +73,7 @@ __all__ = [
     "SpatialConventionAttrsR2",
     "SpatialConventionAttrsR3",
     "create",
+    "create_convention_attrs",
     "detect",
     "extract",
     "insert",
@@ -91,6 +92,7 @@ class _RevisionModule(NamedTuple):
     insert: typing.Callable[..., JsonDict]
     validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
     extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
+    create_convention_attrs: typing.Callable[..., typing.Mapping[str, JsonValue]]
     validate_group_metadata: typing.Callable[..., object]
     validate_array_metadata: typing.Callable[..., object]
     validate_node_metadata: typing.Callable[..., object]
@@ -103,6 +105,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r2.insert,
         _r2.validate,
         _r2.extract,
+        _r2.create_convention_attrs,
         _r2.validate_group_metadata,
         _r2.validate_array_metadata,
         _r2.validate_node_metadata,
@@ -113,6 +116,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r3.insert,
         _r3.validate,
         _r3.extract,
+        _r3.create_convention_attrs,
         _r3.validate_group_metadata,
         _r3.validate_array_metadata,
         _r3.validate_node_metadata,
@@ -395,3 +399,67 @@ def validate_node_metadata(
     return validate_group_metadata(
         typing.cast("GroupMetadataInput", metadata), revision=revision
     )
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    dimensions: list[str] | tuple[str, ...] | None = None,
+    bbox: list[float] | tuple[float, ...] | None = None,
+    transform_type: str | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
+    registration: str | None = None,
+) -> SpatialConventionAttrsR3: ...
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    dimensions: list[str] | tuple[str, ...] | None = None,
+    bbox: list[float] | tuple[float, ...] | None = None,
+    transform_type: str | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
+    registration: str | None = None,
+    revision: Literal["r2"],
+) -> SpatialConventionAttrsR2: ...
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    dimensions: list[str] | tuple[str, ...] | None = None,
+    bbox: list[float] | tuple[float, ...] | None = None,
+    transform_type: str | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
+    registration: str | None = None,
+    revision: Literal["r3"],
+) -> SpatialConventionAttrsR3: ...
+
+
+@typing.overload
+def create_convention_attrs(
+    *,
+    dimensions: list[str] | tuple[str, ...] | None = None,
+    bbox: list[float] | tuple[float, ...] | None = None,
+    transform_type: str | None = None,
+    transform: list[float] | tuple[float, ...] | None = None,
+    shape: list[int] | tuple[int, ...] | None = None,
+    registration: str | None = None,
+    revision: str,
+) -> SpatialConventionAttrsR2 | SpatialConventionAttrsR3: ...
+
+
+def create_convention_attrs(
+    *args: object, revision: str = LATEST, **kwargs: object
+) -> object:
+    """Create a stand-alone attributes dict carrying spatial and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    return dict(_revision(revision).create_convention_attrs(*args, **kwargs))

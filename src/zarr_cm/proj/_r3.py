@@ -9,6 +9,7 @@ match upstream v0.1.
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
@@ -46,7 +47,7 @@ GeoProjAttrs = TypedDict(
 GeoProjConventionAttrs = TypedDict(
     "GeoProjConventionAttrs",
     {
-        "zarr_conventions": tuple[ConventionMetadataObject, ...],
+        "zarr_conventions": Sequence[ConventionMetadataObject],
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JsonDict],
@@ -92,6 +93,26 @@ def create(
     if projjson is not None:
         result["proj:projjson"] = projjson
     validate(result)
+    return result
+
+
+def create_convention_attrs(
+    *,
+    code: str | None = None,
+    wkt2: str | None = None,
+    projjson: JsonDict | None = None,
+) -> GeoProjConventionAttrs:
+    """Create a stand-alone attributes dict carrying proj (r3) and nothing else.
+
+    The result is a complete `attributes` value: the convention data from
+    `create()` plus the `zarr_conventions` entry that declares it. Use
+    `insert()` instead to add this convention to attributes that already
+    exist -- that is what `insert` is for.
+    """
+    result: GeoProjConventionAttrs = {
+        "zarr_conventions": [CMO],
+        **create(code=code, wkt2=wkt2, projjson=projjson),
+    }
     return result
 
 

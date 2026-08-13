@@ -46,8 +46,12 @@ Python types and utilities for
 Each module provides:
 
 - **TypedDict types** for convention-specific metadata
-- **`create`** — create convention metadata
-- **`insert`** — add convention metadata to a Zarr attributes dict
+- **`create`** — create convention metadata: the convention's own keys, nothing
+  else
+- **`create_convention_attrs`** — create a complete stand-alone attributes dict:
+  that data plus the `zarr_conventions` entry declaring it
+- **`insert`** — compose: add convention metadata to attributes that already
+  exist
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
 - **`validate_group_metadata`** / **`validate_array_metadata`** /
