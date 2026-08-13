@@ -138,3 +138,18 @@ Rather than ship a revision whose self-describing URL is permanently broken,
 `r2`/`r3` labels (labels are package-local and never appear in emitted
 documents, so renumbering would only churn the public type names without
 changing behavior).
+
+## Development
+
+Common development tasks are defined in the [`justfile`](justfile) and run with
+[`just`](https://just.systems) (they only need
+[`uv`](https://docs.astral.sh/uv/) on top of that):
+
+```bash
+just            # list all the available recipes
+just test       # run the test suite
+just lint       # run the pre-commit hooks over all files
+just typecheck  # run mypy
+just docs       # serve the docs locally with live reload
+just check      # everything CI runs: lint, pylint, typecheck, tests
+```

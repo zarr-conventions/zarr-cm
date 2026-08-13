@@ -16,5 +16,8 @@ jobs:
         with:
           python-version: "3.11"
 
+      - uses: astral-sh/setup-uv@v7
+      - uses: extractions/setup-just@v4
+
       - name: Check for upstream schema drift
-        run: python .github/scripts/check_upstream.py
+        run: just check-upstream

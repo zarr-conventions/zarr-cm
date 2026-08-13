@@ -1,7 +1,5 @@
-ci:
-  autoupdate_commit_msg: "chore(deps): update pre-commit hooks"
-  autofix_commit_msg: "style: pre-commit fixes"
-  autoupdate_schedule: "monthly"
+# Hooks are run by prek (https://prek.j178.dev), both locally via `just lint`
+# and in CI. Refresh the pinned revisions below with `just update-hooks`.
 
 exclude: ^.cruft.json|.copier-answers.yml$
 
@@ -54,12 +52,11 @@ repos:
     hooks:
       - id: pyright
         # tests/ is not an installed package in the isolated hook env, so pyright
-        # cannot resolve `import zarr_cm` there; tests are type-checked by the
-        # `typecheck` nox session where the package is installed. Keep the
-        # commit-time hook scoped to src.
-        files: src|noxfile.py
+        # cannot resolve `import zarr_cm` there; tests are type-checked by
+        # `just typecheck`, where the package is installed. Keep the commit-time
+        # hook scoped to src.
+        files: src
         additional_dependencies:
-          - nox
           - pytest
           - pytest-examples
           - types-jsonschema

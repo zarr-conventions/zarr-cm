@@ -30,14 +30,26 @@ jobs:
           python-version: "3.x"
 
       - uses: astral-sh/setup-uv@v7
+      - uses: extractions/setup-just@v4
 
-      - uses: pre-commit/action@v3.0.1
+      # `just lint` runs prek, so cache its hook environments the way
+      # pre-commit/action used to cache pre-commit's.
+      - uses: actions/cache@v6
         with:
-          extra_args: --hook-stage manual --all-files
+          path: ~/.cache/prek
+          key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Lint
+        run: just lint --hook-stage manual
+
+      - name: Check that uv.lock is up to date
+        run: just lock --check
+
       - name: Run Pylint
-        run: uvx nox -s pylint -- --output-format=github
+        run: just pylint --output-format=github
+
       - name: Type-check (src + tests)
-        run: uvx nox -s typecheck
+        run: just typecheck
 
   checks:
     name: Check Python ${{ matrix.python-version }} on ${{ matrix.runs-on }}
@@ -64,14 +76,12 @@ jobs:
           allow-prereleases: true
 
       - uses: astral-sh/setup-uv@v7
+      - uses: extractions/setup-just@v4
 
-      - name: Install package
-        run: uv sync
-
+      # `just test-ci` installs the package and the test group on the way in,
+      # so there is no separate install step.
       - name: Test package
-        run: >-
-          uv run pytest -ra --cov --cov-report=xml --cov-report=term
-          --durations=20
+        run: just test-ci
 
       - name: Upload coverage report
         uses: codecov/codecov-action@v7

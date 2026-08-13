@@ -5,73 +5,57 @@ description of best practices for developing scientific packages.
 
 # Quick development
 
-The fastest way to start with development is to use nox. If you don't have nox,
-you can use `uvx nox` to run it without installing, or `uv tool install nox`. If
-you don't have uv, you can
-[install it a variety of ways](https://docs.astral.sh/uv/getting-started/installation/),
-including with pip, pipx, brew, and just downloading the binary (single file).
+Development tasks are defined in the [`justfile`](../justfile) at the repository
+root. You need two tools:
 
-To use, run `nox`. This will lint and test using every installed version of
-Python on your system, skipping ones that are not installed. You can also run
-specific jobs:
+- [`just`](https://just.systems), the command runner
+- [`uv`](https://docs.astral.sh/uv/), which manages Python and every dependency
+
+Everything else is fetched on demand, so there is nothing else to install. Run
+`just` on its own to list the recipes:
 
 ```console
-$ nox -s lint  # Lint only
-$ nox -s tests  # Python tests
-$ nox -s docs  # Build and serve the docs
-$ nox -s build  # Make an SDist and wheel
+$ just              # list all recipes
+$ just sync         # create the development environment in .venv
+$ just check        # everything CI runs: lint, pylint, type check, tests
 ```
 
-Nox handles everything for you, including setting up an temporary virtual
-environment for each run.
-
-# Setting up a development environment manually
-
-You can set up a development environment by running:
-
-```bash
-uv sync
-```
-
-# Pre-commit
-
-You should prepare pre-commit or prek, which will help you by checking that
-commits pass required checks:
-
-```bash
-uv tool install pre-commit # or brew install pre-commit on macOS
-pre-commit install # Will install a pre-commit hook into the git repo
-```
-
-You can also/alternatively run `pre-commit run` (changes only) or
-`pre-commit run --all-files` to check even without installing the hook.
+CI runs these same recipes, so a green `just check` locally means the same
+commands passed with the same flags.
 
 # Testing
 
-Use pytest to run the unit checks:
-
-```bash
-uv run pytest
+```console
+$ just test                 # the test suite
+$ just test -k spatial      # arguments are passed through to pytest
+$ just test-cov             # with a coverage report
+$ just test-python 3.14     # against one other Python, in a throwaway env
+$ just test-all             # against every supported Python (uv downloads them)
 ```
 
-# Coverage
+# Linting and type checking
 
-Use pytest-cov to generate coverage reports:
-
-```bash
-uv run pytest --cov=zarr-cm
+```console
+$ just lint          # the prek hooks over all files
+$ just lint-install  # install them as a git pre-commit hook
+$ just typecheck     # pyright over src and tests
+$ just pylint        # Pylint, which needs the package installed
 ```
+
+Hooks are run by [prek](https://prek.j178.dev), a drop-in replacement for
+pre-commit that reads the same `.pre-commit-config.yaml`. Refresh the pinned
+hook revisions with `just update-hooks`.
 
 # Building docs
 
-You can build and serve the docs using:
-
-```bash
-nox -s docs
+```console
+$ just docs        # serve locally with live reload
+$ just docs-build  # build into site/
 ```
 
-You can build the docs only with:
+# Dependencies
 
-```bash
-nox -s docs --non-interactive
-```
+`uv.lock` is committed, so everyone resolves the same dependency versions. After
+editing dependencies in `pyproject.toml`, run `just lock` and commit the result
+— CI fails if the lockfile is out of date. `just lock --upgrade` moves the
+pinned versions forward.
