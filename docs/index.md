@@ -29,6 +29,9 @@ Each convention module provides the following operations:
   new dict with a `zarr_conventions` entry.
 - **`extract`** removes convention metadata from an attributes dict and returns
   the remaining attributes and the extracted convention data.
+- **`validate_group_metadata`**, **`validate_array_metadata`** and
+  **`validate_node_metadata`** validate a whole `zarr.json` document. See
+  [Validating whole metadata documents](#validating-whole-metadata-documents).
 
 <!-- blacken-docs:off -->
 <!-- prettier-ignore -->
@@ -112,6 +115,83 @@ from zarr_cm import spatial
 footprint = spatial.create(bbox=[-180.0, -90.0, 180.0, 90.0])
 print(footprint)
 #> {'spatial:bbox': [-180.0, -90.0, 180.0, 90.0]}
+```
+
+<!-- blacken-docs:on -->
+
+## Validating whole metadata documents
+
+`validate` sees only an attributes dict, so it cannot check the rules that
+depend on which kind of node the attributes belong to. The node-level entry
+points take a whole `zarr.json` document and can: `spatial` requires
+`spatial:dimensions` on arrays but not on groups, and `multiscales` applies to
+groups only.
+
+`validate_node_metadata` dispatches on the document's `node_type` to
+`validate_array_metadata` or `validate_group_metadata`. Every convention module
+provides all three, and the package-level versions fan out over every convention
+the document declares.
+
+The single-convention validators also **narrow the document's type**. Every
+metadata document is a `GroupMetadata[AttrsT]` or `ArrayMetadata[AttrsT]` — a
+generic TypedDict whose type parameter states what is known about `attributes`.
+Bare `GroupMetadata` is the wide form (an arbitrary JSON object), and validating
+against a convention narrows it to that convention's attrs type, so a signature
+can require a validated document and the validated document keeps its field
+types:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import GroupMetadata, SpatialConventionAttrs, spatial
+
+def write_group(node: GroupMetadata[SpatialConventionAttrs]) -> str:
+    # attributes are typed as spatial's TypedDict, not an untyped JSON object
+    return f"writing, bbox={node['attributes'].get('spatial:bbox')}"
+
+attrs = spatial.insert({}, spatial.create(bbox=[0.0, 0.0, 1.0, 1.0]))
+group: GroupMetadata = {"zarr_format": 3, "node_type": "group", "attributes": attrs}
+
+print(write_group(spatial.validate_group_metadata(group)))
+#> writing, bbox=[0.0, 0.0, 1.0, 1.0]
+```
+
+<!-- blacken-docs:on -->
+
+Handing `write_group` the wide `group` without validating is a type error. The
+narrowed document is the same object, returned unchanged — the narrowing is a
+type-level claim about the moment of validation, and the mapping underneath
+stays mutable, so it records that validation _happened_, not that the contents
+are still valid.
+
+Two boundaries are deliberate. The `attributes` parameter is covariant, so a
+narrowed document still flows anywhere the wide form is accepted — validators
+chain — but narrowing does not _accumulate_: there is no intersection type, so
+validating against spatial and then proj yields proj's type alone. And the
+package-level validators fan out over whichever conventions the document
+declares — a runtime-determined set — so they cannot narrow at all; they return
+their input at the type it came in with.
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+import zarr_cm
+from zarr_cm import spatial
+
+attributes = spatial.insert({}, spatial.create(bbox=[-180.0, -90.0, 180.0, 90.0]))
+
+# A group may carry a footprint with no dimensions.
+group = {"zarr_format": 3, "node_type": "group", "attributes": attributes}
+print(zarr_cm.validate_node_metadata(group)["node_type"])
+#> group
+
+# The same attributes on an array are not valid.
+array = {**group, "node_type": "array"}
+try:
+    spatial.validate_array_metadata(array)
+except ValueError as exc:
+    print(exc)
+    #> 'spatial:dimensions' is required on array nodes
 ```
 
 <!-- blacken-docs:on -->

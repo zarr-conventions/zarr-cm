@@ -19,14 +19,26 @@ revision for writes / auto-detect for reads.
 from __future__ import annotations
 
 import typing
-from typing import TYPE_CHECKING, Final, NamedTuple, TypeAlias
+from typing import TYPE_CHECKING, Final, NamedTuple, Never, TypeAlias
 
-from zarr_cm._core import JsonDict, JsonValue, detect_revision, resolve_revision_label
+from zarr_cm._core import (
+    ArrayMetadataInput,
+    GroupMetadata,
+    GroupMetadataInput,
+    JsonDict,
+    JsonValue,
+    NodeMetadataInput,
+    detect_revision,
+    node_attributes,
+    node_type_of,
+    resolve_revision_label,
+)
 
 from . import _r2
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
 
 # Re-export the latest revision's public types/constants at package level.
 # Listed in __all__ so they count as explicit public re-exports without the
@@ -69,6 +81,9 @@ __all__ = [
     "insert",
     "r2",
     "validate",
+    "validate_array_metadata",
+    "validate_group_metadata",
+    "validate_node_metadata",
 ]
 
 
@@ -78,11 +93,21 @@ class _RevisionModule(NamedTuple):
     insert: typing.Callable[..., JsonDict]
     validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
     extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
+    validate_group_metadata: typing.Callable[..., object]
+    validate_array_metadata: typing.Callable[..., object]
+    validate_node_metadata: typing.Callable[..., object]
 
 
 _REVISIONS: Final[dict[str, _RevisionModule]] = {
     "r2": _RevisionModule(
-        _r2.SCHEMA_URL, _r2.create, _r2.insert, _r2.validate, _r2.extract
+        _r2.SCHEMA_URL,
+        _r2.create,
+        _r2.insert,
+        _r2.validate,
+        _r2.extract,
+        _r2.validate_group_metadata,
+        _r2.validate_array_metadata,
+        _r2.validate_node_metadata,
     ),
 }
 LATEST: Final = "r2"
@@ -184,4 +209,53 @@ def extract(
     return typing.cast(
         "tuple[JsonDict, MultiscalesAttrsR2]",
         _revision(_resolve_read_revision(attrs, revision)).extract(attrs),
+    )
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput, *, revision: str | None = None
+) -> GroupMetadata[MultiscalesConventionAttrsR2]:
+    """Validate a full v3 group metadata document against multiscales.
+
+    The revision is detected from the document's own `zarr_conventions` entry
+    unless *revision* pins one. The document comes back with its `attributes`
+    narrowed to the matched revision's convention type.
+    """
+    attrs = node_attributes(metadata)
+    return typing.cast(
+        "GroupMetadata[MultiscalesConventionAttrsR2]",
+        _revision(_resolve_read_revision(attrs, revision)).validate_group_metadata(
+            metadata
+        ),
+    )
+
+
+def validate_array_metadata(
+    metadata: ArrayMetadataInput, *, revision: str | None = None
+) -> Never:
+    """Reject a v3 array metadata document: multiscales is a group-only convention.
+
+    Every revision restricts `node_type` to `"group"`, so this always raises.
+    """
+    attrs = node_attributes(metadata)
+    _revision(_resolve_read_revision(attrs, revision)).validate_array_metadata(metadata)
+    msg = "unreachable: every multiscales revision rejects array nodes"
+    raise AssertionError(msg)
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput, *, revision: str | None = None
+) -> GroupMetadata[MultiscalesConventionAttrsR2]:
+    """Validate a full v3 node metadata document against multiscales.
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`. Only the
+    group arm can return: multiscales has no valid array form.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(
+            typing.cast("ArrayMetadataInput", metadata), revision=revision
+        )
+    return validate_group_metadata(
+        typing.cast("GroupMetadataInput", metadata), revision=revision
     )

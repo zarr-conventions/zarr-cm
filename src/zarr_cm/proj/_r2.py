@@ -9,19 +9,28 @@ is unchanged from r1.
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Final, NotRequired
+from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+
 from zarr_cm._core import (
+    ArrayMetadata,
+    ArrayMetadataInput,
     ConventionMetadataObject,
+    GroupMetadata,
+    GroupMetadataInput,
     JsonDict,
     JsonValue,
+    NodeMetadataInput,
+    NodeType,
+    convention_attributes,
     extract_convention,
     insert_convention,
+    node_type_of,
 )
 
 GeoProjAttrs = TypedDict(
@@ -122,3 +131,47 @@ def validate(data: Mapping[str, JsonValue]) -> GeoProjAttrs:
         msg = f"'proj:code' must match {_CODE_PATTERN.pattern!r}, got {data['proj:code']!r}"
         raise ValueError(msg)
     return data  # type: ignore[return-value]
+
+
+def _convention_data(
+    metadata: Mapping[str, object], node_type: NodeType
+) -> GeoProjAttrs:
+    """Pull this document's proj data out and run the attribute-level rules."""
+    attributes = convention_attributes(
+        metadata, convention="proj", uuid=UUID, expected_node_type=node_type
+    )
+    _, data = extract(attributes)
+    return validate(data)
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput,
+) -> GroupMetadata[GeoProjConventionAttrs]:
+    """Validate a v3 group metadata document against proj (r2)."""
+    _convention_data(metadata, "group")
+    return cast("GroupMetadata[GeoProjConventionAttrs]", metadata)
+
+
+def validate_array_metadata(
+    metadata: ArrayMetadataInput,
+) -> ArrayMetadata[GeoProjConventionAttrs]:
+    """Validate a v3 array metadata document against proj (r2).
+
+    Proj (r2) places no node-type-specific requirements on either
+    node type, so this matches `validate_group_metadata()`.
+    """
+    _convention_data(metadata, "array")
+    return cast("ArrayMetadata[GeoProjConventionAttrs]", metadata)
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput,
+) -> ArrayMetadata[GeoProjConventionAttrs] | GroupMetadata[GeoProjConventionAttrs]:
+    """Validate a v3 node metadata document against proj (r2).
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(cast("ArrayMetadataInput", metadata))
+    return validate_group_metadata(cast("GroupMetadataInput", metadata))

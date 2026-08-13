@@ -50,6 +50,9 @@ Each module provides:
 - **`insert`** — add convention metadata to a Zarr attributes dict
 - **`extract`** — remove and return convention metadata from an attributes dict
 - **`validate`** — check runtime invariants the type system cannot express
+- **`validate_group_metadata`** / **`validate_array_metadata`** /
+  **`validate_node_metadata`** — validate a whole `zarr.json` document,
+  including the rules that depend on its `node_type`
 
 See the [docs](https://zarr-cm.readthedocs.io/en/latest/) for more information.
 

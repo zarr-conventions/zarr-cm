@@ -11,20 +11,29 @@ attributes without the surrounding node, so a group carrying only
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Final, NotRequired
+from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
 
 from zarr_cm._core import (
+    ArrayMetadata,
+    ArrayMetadataInput,
     ConventionMetadataObject,
+    GroupMetadata,
+    GroupMetadataInput,
     JsonDict,
     JsonValue,
+    NodeMetadataInput,
+    NodeType,
+    convention_attributes,
     extract_convention,
     insert_convention,
+    node_type_of,
 )
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
 
 SpatialAttrs = TypedDict(
     "SpatialAttrs",
@@ -176,3 +185,54 @@ def validate(data: Mapping[str, JsonValue]) -> SpatialAttrs:
         msg = f"'spatial:registration' must be one of {_VALID_REGISTRATIONS}, got {data['spatial:registration']!r}"
         raise ValueError(msg)
     return data  # type: ignore[return-value]
+
+
+def _convention_data(
+    metadata: Mapping[str, object], node_type: NodeType
+) -> SpatialAttrs:
+    """Pull this document's spatial data out and run the attribute-level rules."""
+    attributes = convention_attributes(
+        metadata, convention="spatial", uuid=UUID, expected_node_type=node_type
+    )
+    _, data = extract(attributes)
+    return validate(data)
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput,
+) -> GroupMetadata[SpatialConventionAttrs]:
+    """Validate a v3 group metadata document against spatial (r2).
+
+    `spatial:dimensions` is not required here: upstream marks it required only
+    when `node_type` is `"array"`, so a group may carry the other spatial:
+    keys -- a union footprint, say -- on their own.
+    """
+    _convention_data(metadata, "group")
+    return cast("GroupMetadata[SpatialConventionAttrs]", metadata)
+
+
+def validate_array_metadata(
+    metadata: ArrayMetadataInput,
+) -> ArrayMetadata[SpatialConventionAttrs]:
+    """Validate a v3 array metadata document against spatial (r2).
+
+    Arrays must carry `spatial:dimensions`; groups need not.
+    """
+    data = _convention_data(metadata, "array")
+    if "spatial:dimensions" not in data:
+        msg = "'spatial:dimensions' is required on array nodes"
+        raise ValueError(msg)
+    return cast("ArrayMetadata[SpatialConventionAttrs]", metadata)
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput,
+) -> ArrayMetadata[SpatialConventionAttrs] | GroupMetadata[SpatialConventionAttrs]:
+    """Validate a v3 node metadata document against spatial (r2).
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(cast("ArrayMetadataInput", metadata))
+    return validate_group_metadata(cast("GroupMetadataInput", metadata))

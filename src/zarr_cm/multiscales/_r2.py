@@ -14,19 +14,26 @@ from __future__ import annotations
 # type-checks fine and then raises ``NameError`` for that consumer.
 # See tests/test_pydantic.py::test_every_public_typeddict_rebuilds.
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Final, NotRequired
+from typing import TYPE_CHECKING, Final, Never, NotRequired, cast
 
 from typing_extensions import TypedDict
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
 
+
 from zarr_cm._core import (
+    ArrayMetadataInput,
     ConventionMetadataObject,
+    GroupMetadata,
+    GroupMetadataInput,
     JsonDict,
     JsonValue,
+    NodeMetadataInput,
+    convention_attributes,
     extract_convention,
     insert_convention,
+    node_type_of,
 )
 
 
@@ -158,3 +165,40 @@ def validate(data: Mapping[str, JsonValue]) -> MultiscalesAttrs:
             msg = f"layout[{i}] has 'derived_from' but is missing 'transform'"
             raise ValueError(msg)
     return data  # type: ignore[return-value]
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput,
+) -> GroupMetadata[MultiscalesConventionAttrs]:
+    """Validate a v3 group metadata document against multiscales (r2)."""
+    attributes = convention_attributes(
+        metadata, convention="multiscales", uuid=UUID, expected_node_type="group"
+    )
+    _, data = extract(attributes)
+    validate(data)
+    return cast("GroupMetadata[MultiscalesConventionAttrs]", metadata)
+
+
+def validate_array_metadata(metadata: ArrayMetadataInput) -> Never:
+    """Reject a v3 array metadata document: multiscales is a group-only convention.
+
+    The schema restricts `node_type` to `"group"`, so there is no valid
+    array form of this convention and this always raises.
+    """
+    node_type_of(metadata, expected="array")
+    msg = "the 'multiscales' convention does not apply to array nodes"
+    raise ValueError(msg)
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput,
+) -> GroupMetadata[MultiscalesConventionAttrs]:
+    """Validate a v3 node metadata document against multiscales (r2).
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`. Only the
+    group arm can return: multiscales has no valid array form.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(cast("ArrayMetadataInput", metadata))
+    return validate_group_metadata(cast("GroupMetadataInput", metadata))

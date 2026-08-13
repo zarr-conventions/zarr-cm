@@ -21,12 +21,25 @@ from __future__ import annotations
 import typing
 from typing import TYPE_CHECKING, Final, Literal, NamedTuple, TypeAlias
 
-from zarr_cm._core import JsonDict, JsonValue, detect_revision, resolve_revision_label
+from zarr_cm._core import (
+    ArrayMetadata,
+    ArrayMetadataInput,
+    GroupMetadata,
+    GroupMetadataInput,
+    JsonDict,
+    JsonValue,
+    NodeMetadataInput,
+    detect_revision,
+    node_attributes,
+    node_type_of,
+    resolve_revision_label,
+)
 
 from . import _r2, _r3
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
+
 
 # Re-export the latest revision's public types/constants at package level.
 # Listed in __all__ so they count as explicit public re-exports without the
@@ -66,6 +79,9 @@ __all__ = [
     "r2",
     "r3",
     "validate",
+    "validate_array_metadata",
+    "validate_group_metadata",
+    "validate_node_metadata",
 ]
 
 
@@ -75,14 +91,31 @@ class _RevisionModule(NamedTuple):
     insert: typing.Callable[..., JsonDict]
     validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
     extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
+    validate_group_metadata: typing.Callable[..., object]
+    validate_array_metadata: typing.Callable[..., object]
+    validate_node_metadata: typing.Callable[..., object]
 
 
 _REVISIONS: Final[dict[str, _RevisionModule]] = {
     "r2": _RevisionModule(
-        _r2.SCHEMA_URL, _r2.create, _r2.insert, _r2.validate, _r2.extract
+        _r2.SCHEMA_URL,
+        _r2.create,
+        _r2.insert,
+        _r2.validate,
+        _r2.extract,
+        _r2.validate_group_metadata,
+        _r2.validate_array_metadata,
+        _r2.validate_node_metadata,
     ),
     "r3": _RevisionModule(
-        _r3.SCHEMA_URL, _r3.create, _r3.insert, _r3.validate, _r3.extract
+        _r3.SCHEMA_URL,
+        _r3.create,
+        _r3.insert,
+        _r3.validate,
+        _r3.extract,
+        _r3.validate_group_metadata,
+        _r3.validate_array_metadata,
+        _r3.validate_node_metadata,
     ),
 }
 LATEST: Final = "r3"
@@ -258,3 +291,95 @@ def extract(
     attrs: Mapping[str, JsonValue], *, revision: str | None = None
 ) -> tuple[JsonDict, object]:
     return _revision(_resolve_read_revision(attrs, revision)).extract(attrs)
+
+
+@typing.overload
+def validate_group_metadata(
+    metadata: GroupMetadataInput, *, revision: Literal["r2"]
+) -> GroupMetadata[GeoProjConventionAttrsR2]: ...
+
+
+@typing.overload
+def validate_group_metadata(
+    metadata: GroupMetadataInput, *, revision: Literal["r3"]
+) -> GroupMetadata[GeoProjConventionAttrsR3]: ...
+
+
+@typing.overload
+def validate_group_metadata(
+    metadata: GroupMetadataInput, *, revision: str | None = None
+) -> (
+    GroupMetadata[GeoProjConventionAttrsR2] | GroupMetadata[GeoProjConventionAttrsR3]
+): ...
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput, *, revision: str | None = None
+) -> object:
+    """Validate a full v3 group metadata document against proj.
+
+    The revision is detected from the document's own `zarr_conventions` entry
+    unless *revision* pins one. The document comes back with its `attributes`
+    narrowed to the matched revision's convention type.
+    """
+    attrs = node_attributes(metadata)
+    return _revision(_resolve_read_revision(attrs, revision)).validate_group_metadata(
+        metadata
+    )
+
+
+@typing.overload
+def validate_array_metadata(
+    metadata: ArrayMetadataInput, *, revision: Literal["r2"]
+) -> ArrayMetadata[GeoProjConventionAttrsR2]: ...
+
+
+@typing.overload
+def validate_array_metadata(
+    metadata: ArrayMetadataInput, *, revision: Literal["r3"]
+) -> ArrayMetadata[GeoProjConventionAttrsR3]: ...
+
+
+@typing.overload
+def validate_array_metadata(
+    metadata: ArrayMetadataInput, *, revision: str | None = None
+) -> (
+    ArrayMetadata[GeoProjConventionAttrsR2] | ArrayMetadata[GeoProjConventionAttrsR3]
+): ...
+
+
+def validate_array_metadata(
+    metadata: ArrayMetadataInput, *, revision: str | None = None
+) -> object:
+    """Validate a full v3 array metadata document against proj.
+
+    The revision is detected from the document's own `zarr_conventions` entry
+    unless *revision* pins one. The document comes back with its `attributes`
+    narrowed to the matched revision's convention type.
+    """
+    attrs = node_attributes(metadata)
+    return _revision(_resolve_read_revision(attrs, revision)).validate_array_metadata(
+        metadata
+    )
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput, *, revision: str | None = None
+) -> (
+    ArrayMetadata[GeoProjConventionAttrsR2]
+    | ArrayMetadata[GeoProjConventionAttrsR3]
+    | GroupMetadata[GeoProjConventionAttrsR2]
+    | GroupMetadata[GeoProjConventionAttrsR3]
+):
+    """Validate a full v3 node metadata document against proj.
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(
+            typing.cast("ArrayMetadataInput", metadata), revision=revision
+        )
+    return validate_group_metadata(
+        typing.cast("GroupMetadataInput", metadata), revision=revision
+    )

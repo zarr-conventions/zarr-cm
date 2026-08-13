@@ -60,7 +60,10 @@ def test_model_with_convention_attrs_typeddict_rebuilds() -> None:
     assert node.attributes.get("spatial:dimensions") == ["y", "x"]
 
 
-# Every public TypedDict, by module. A class-form TypedDict under
+# Every public TypedDict, by module -- except the generic metadata documents
+# (`GroupMetadata`/`ArrayMetadata`): pydantic accepts them but emits a
+# UserWarning for their `ReadOnly` field, which this suite's
+# ``filterwarnings = error`` would turn into a failure. A class-form TypedDict under
 # ``from __future__ import annotations`` stores its annotations as strings, so
 # every name they mention has to be importable at RUNTIME from the defining
 # module -- pydantic evaluates them in that module's namespace. Parking one of

@@ -1388,6 +1388,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "pytest-examples" },
     { name = "types-jsonschema" },
+    { name = "zarr-metadata" },
 ]
 docs = [
     { name = "markdown" },
@@ -1407,6 +1408,7 @@ test = [
 typecheck = [
     { name = "pyright" },
     { name = "types-jsonschema" },
+    { name = "zarr-metadata" },
 ]
 
 [package.metadata]
@@ -1421,6 +1423,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7" },
     { name = "pytest-examples", specifier = ">=0.0.14" },
     { name = "types-jsonschema" },
+    { name = "zarr-metadata", specifier = ">=0.4" },
 ]
 docs = [
     { name = "markdown", specifier = ">=3.9" },
@@ -1440,4 +1443,17 @@ test = [
 typecheck = [
     { name = "pyright", specifier = ">=1.1.386" },
     { name = "types-jsonschema" },
+    { name = "zarr-metadata", specifier = ">=0.4" },
+]
+
+[[package]]
+name = "zarr-metadata"
+version = "0.4.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/04/76/ca9334554b9a875c2c68203e2ce8b0a3febe1c3e9efba00a57e9a12c4e40/zarr_metadata-0.4.0.tar.gz", hash = "sha256:56788af0b86ec653176410fd57e0f4815331ac61d61e562dfd020198e98ce3eb", size = 149567, upload-time = "2026-07-29T20:20:38.513Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/cb/8b/f8594d9160f0eaae3f988eb2969bafc9db96bf3e224b8199b1bb80fa1f7a/zarr_metadata-0.4.0-py3-none-any.whl", hash = "sha256:642106291b881284d08222973d0970dd950d254b2286f36fcc269b0b1a1f4be2", size = 69750, upload-time = "2026-07-29T20:20:37.059Z" },
 ]

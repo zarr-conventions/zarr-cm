@@ -63,6 +63,12 @@ test = [
 typecheck = [
   "pyright >=1.1.386",
   "types-jsonschema",
+  # Typing-only: the node-metadata validators annotate their arguments with
+  # zarr-metadata's v3 TypedDicts, imported under TYPE_CHECKING. Deliberately in
+  # this group and NOT in [project].dependencies, which is kept minimal --
+  # `just test-ci` installs the test group alone, so the suite proves the
+  # validators work without it.
+  "zarr-metadata >=0.4",
 ]
 dev = [
   { include-group = "test" },

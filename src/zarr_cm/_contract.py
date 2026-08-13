@@ -18,10 +18,12 @@ class ConventionModule(Protocol):
     """Structural contract every convention module (and revision submodule) satisfies.
 
     Pins the dispatch surface: the constants ``UUID``/``SCHEMA_URL``/``SPEC_URL``/
-    ``CMO``/``CONVENTION_KEYS`` and the operations ``create``/``insert``/``extract``/
-    ``validate``. The callable signatures themselves are pinned by the typed
-    dispatch protocols in the aggregate modules, while this structural protocol
-    verifies each convention module exposes the shared names.
+    `CMO`/`CONVENTION_KEYS`, the attributes-level operations
+    `create`/`insert`/`extract`/`validate`, and the node-level operations
+    `validate_group_metadata`/`validate_array_metadata`/`validate_node_metadata`.
+    The callable signatures themselves are pinned by the typed dispatch protocols
+    in the aggregate modules, while this structural protocol verifies each
+    convention module exposes the shared names.
     """
 
     # The uppercase property names below deliberately mirror the module-level
@@ -54,6 +56,12 @@ class ConventionModule(Protocol):
     def extract(self) -> object: ...
     @property
     def validate(self) -> object: ...
+    @property
+    def validate_group_metadata(self) -> object: ...
+    @property
+    def validate_array_metadata(self) -> object: ...
+    @property
+    def validate_node_metadata(self) -> object: ...
 
 
 if TYPE_CHECKING:

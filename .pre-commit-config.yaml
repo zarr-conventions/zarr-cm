@@ -61,6 +61,9 @@ repos:
           - pytest-examples
           - types-jsonschema
           - typing_extensions>=4.13
+          # Typing-only: supplies the v3 node-metadata TypedDicts the
+          # validate_*_metadata signatures reference under TYPE_CHECKING.
+          - zarr-metadata>=0.4
 
   - repo: https://github.com/codespell-project/codespell
     rev: "v2.4.1"

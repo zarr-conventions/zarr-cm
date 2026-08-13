@@ -15,6 +15,9 @@
         - insert_many
         - extract_many
         - extract_all
+        - validate_group_metadata
+        - validate_array_metadata
+        - validate_node_metadata
 
 ## Core
 

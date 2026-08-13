@@ -23,6 +23,9 @@ from zarr_cm.proj import (
     extract,
     insert,
     validate,
+    validate_array_metadata,
+    validate_group_metadata,
+    validate_node_metadata,
 )
 
 __all__ = [
@@ -42,4 +45,7 @@ __all__ = [
     "extract",
     "insert",
     "validate",
+    "validate_array_metadata",
+    "validate_group_metadata",
+    "validate_node_metadata",
 ]

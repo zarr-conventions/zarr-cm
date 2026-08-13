@@ -2,16 +2,24 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Final, NotRequired
+from typing import TYPE_CHECKING, Final, NotRequired, cast
 
 from typing_extensions import TypedDict
 
 from zarr_cm._core import (
+    ArrayMetadata,
+    ArrayMetadataInput,
     ConventionMetadataObject,
+    GroupMetadata,
+    GroupMetadataInput,
     JsonDict,
     JsonValue,
+    NodeMetadataInput,
+    NodeType,
+    convention_attributes,
     extract_convention,
     insert_convention,
+    node_type_of,
     resolve_revision_label,
 )
 
@@ -118,3 +126,45 @@ def validate(data: Mapping[str, JsonValue]) -> UomAttrs:
         msg = "'ucum' is required"
         raise ValueError(msg)
     return data  # type: ignore[return-value]
+
+
+def _convention_data(metadata: Mapping[str, object], node_type: NodeType) -> UomAttrs:
+    """Pull this document's uom data out and run the attribute-level rules."""
+    attributes = convention_attributes(
+        metadata, convention="uom", uuid=UUID, expected_node_type=node_type
+    )
+    _, data = extract(attributes)
+    return validate(data)
+
+
+def validate_group_metadata(
+    metadata: GroupMetadataInput,
+) -> GroupMetadata[UomConventionAttrs]:
+    """Validate a v3 group metadata document against the uom convention."""
+    _convention_data(metadata, "group")
+    return cast("GroupMetadata[UomConventionAttrs]", metadata)
+
+
+def validate_array_metadata(
+    metadata: ArrayMetadataInput,
+) -> ArrayMetadata[UomConventionAttrs]:
+    """Validate a v3 array metadata document against the uom convention.
+
+    The uom convention places no node-type-specific requirements on either
+    node type, so this matches `validate_group_metadata()`.
+    """
+    _convention_data(metadata, "array")
+    return cast("ArrayMetadata[UomConventionAttrs]", metadata)
+
+
+def validate_node_metadata(
+    metadata: NodeMetadataInput,
+) -> ArrayMetadata[UomConventionAttrs] | GroupMetadata[UomConventionAttrs]:
+    """Validate a v3 node metadata document against the uom convention.
+
+    Dispatches on the document's `node_type` to
+    `validate_array_metadata()` or `validate_group_metadata()`.
+    """
+    if node_type_of(metadata) == "array":
+        return validate_array_metadata(cast("ArrayMetadataInput", metadata))
+    return validate_group_metadata(cast("GroupMetadataInput", metadata))
