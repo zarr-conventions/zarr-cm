@@ -117,9 +117,16 @@ def test_validate_valid() -> None:
     assert result == {"spatial:dimensions": ["y", "x"]}
 
 
-def test_validate_missing_dimensions() -> None:
-    with pytest.raises(ValueError, match="spatial:dimensions"):
-        spatial.validate({})
+def test_validate_dimensions_optional() -> None:
+    # Upstream requires 'spatial:dimensions' only for node_type == "array", so
+    # group-level metadata (e.g. a union footprint) validates without it.
+    assert spatial.validate({}) == {}
+    assert spatial.validate({"spatial:bbox": [0.0, 0.0, 1.0, 1.0]}) == {
+        "spatial:bbox": [0.0, 0.0, 1.0, 1.0]
+    }
+    # Both surviving revisions snapshot upstream after the rule was narrowed.
+    assert spatial_r2.validate({}) == {}
+    assert spatial_r3.validate({}) == {}
 
 
 def test_validate_bad_dimensions_length() -> None:
@@ -153,9 +160,24 @@ def test_create_full() -> None:
         shape=[100, 200],
         registration="pixel",
     )
-    assert result["spatial:dimensions"] == ["y", "x"]
+    assert result.get("spatial:dimensions") == ["y", "x"]
     assert result.get("spatial:bbox") == [0.0, 0.0, 1.0, 1.0]
     assert result.get("spatial:registration") == "pixel"
+
+
+def test_create_without_dimensions() -> None:
+    result = spatial.create(bbox=[0.0, 0.0, 1.0, 1.0])
+    assert result == {"spatial:bbox": [0.0, 0.0, 1.0, 1.0]}
+
+
+def test_group_without_dimensions_matches_vendored_schema() -> None:
+    # The r3 (v0.1) schema requires 'spatial:dimensions' only for arrays: a
+    # group carrying just a union footprint is valid, the same node typed as an
+    # array is not.
+    attrs = spatial.insert({}, spatial.create(bbox=[0.0, 0.0, 1.0, 1.0]))
+    jsonschema.validate(wrap_attrs(attrs, node_type="group"), R3_SCHEMA)
+    with pytest.raises(jsonschema.ValidationError, match="spatial:dimensions"):
+        jsonschema.validate(wrap_attrs(attrs, node_type="array"), R3_SCHEMA)
 
 
 def test_extract_missing_convention() -> None:
@@ -272,8 +294,8 @@ def test_r3_create_validates_against_vendored_schema() -> None:
 
 
 def test_r2_validate_missing_dimensions() -> None:
-    with pytest.raises(ValueError, match="'spatial:dimensions' is required"):
-        spatial_r2.validate({})
+    # Not an error: upstream requires it only for node_type == "array".
+    assert spatial_r2.validate({}) == {}
 
 
 def test_r2_validate_non_array_bbox() -> None:

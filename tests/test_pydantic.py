@@ -56,4 +56,4 @@ def test_model_with_convention_attrs_typeddict_rebuilds() -> None:
 
     Node.model_rebuild()  # used to raise RecursionError
     node = Node(attributes={"spatial:dimensions": ["y", "x"]})
-    assert node.attributes["spatial:dimensions"] == ["y", "x"]
+    assert node.attributes.get("spatial:dimensions") == ["y", "x"]

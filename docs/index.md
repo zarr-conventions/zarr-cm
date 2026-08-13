@@ -98,6 +98,24 @@ print(old)
 
 <!-- blacken-docs:on -->
 
+### Group-level spatial metadata
+
+The `spatial:` spec requires `spatial:dimensions` only on arrays, so a group may
+carry other `spatial:` keys on their own — for example a union footprint over
+child arrays that do not share a single grid:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import spatial
+
+footprint = spatial.create(bbox=[-180.0, -90.0, 180.0, 90.0])
+print(footprint)
+#> {'spatial:bbox': [-180.0, -90.0, 180.0, 90.0]}
+```
+
+<!-- blacken-docs:on -->
+
 ## Multiple conventions
 
 `create_many`, `insert_many`, `extract_many`, and `validate_many` work with

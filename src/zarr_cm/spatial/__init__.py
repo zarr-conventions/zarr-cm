@@ -123,7 +123,7 @@ def _revision(label: str) -> _RevisionModule:
 @typing.overload
 def create(
     *,
-    dimensions: list[str] | tuple[str, ...],
+    dimensions: list[str] | tuple[str, ...] | None = None,
     bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
     transform: list[float] | tuple[float, ...] | None = None,
@@ -135,7 +135,7 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: list[str] | tuple[str, ...],
+    dimensions: list[str] | tuple[str, ...] | None = None,
     bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
     transform: list[float] | tuple[float, ...] | None = None,
@@ -148,7 +148,7 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: list[str] | tuple[str, ...],
+    dimensions: list[str] | tuple[str, ...] | None = None,
     bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
     transform: list[float] | tuple[float, ...] | None = None,
@@ -161,7 +161,7 @@ def create(
 @typing.overload
 def create(
     *,
-    dimensions: list[str] | tuple[str, ...],
+    dimensions: list[str] | tuple[str, ...] | None = None,
     bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
     transform: list[float] | tuple[float, ...] | None = None,

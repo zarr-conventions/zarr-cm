@@ -2,7 +2,10 @@
 
 Snapshot of upstream at commit 54d81b7ced0376e63ee10f34db31db7d08dcc28d.
 Narrows every dimension-bearing key to a fixed 2D length and requires shape
-items to be positive.
+items to be positive. ``spatial:dimensions`` is optional here: upstream makes
+it required only when ``node_type`` is ``"array"``, and these functions see
+attributes without the surrounding node, so a group carrying only
+``spatial:bbox`` is valid.
 """
 
 from __future__ import annotations
@@ -26,7 +29,7 @@ if TYPE_CHECKING:
 SpatialAttrs = TypedDict(
     "SpatialAttrs",
     {
-        "spatial:dimensions": Sequence[str],
+        "spatial:dimensions": NotRequired[Sequence[str]],
         "spatial:bbox": NotRequired[Sequence[float]],
         "spatial:transform_type": NotRequired[str],
         "spatial:transform": NotRequired[Sequence[float]],
@@ -40,7 +43,7 @@ SpatialConventionAttrs = TypedDict(
     "SpatialConventionAttrs",
     {
         "zarr_conventions": Sequence[ConventionMetadataObject],
-        "spatial:dimensions": Sequence[str],
+        "spatial:dimensions": NotRequired[Sequence[str]],
         "spatial:bbox": NotRequired[Sequence[float]],
         "spatial:transform_type": NotRequired[str],
         "spatial:transform": NotRequired[Sequence[float]],
@@ -92,15 +95,17 @@ _VALID_REGISTRATIONS: Final = ("node", "pixel")
 
 def create(
     *,
-    dimensions: list[str] | tuple[str, ...],
+    dimensions: list[str] | tuple[str, ...] | None = None,
     bbox: list[float] | tuple[float, ...] | None = None,
     transform_type: str | None = None,
     transform: list[float] | tuple[float, ...] | None = None,
     shape: list[int] | tuple[int, ...] | None = None,
     registration: str | None = None,
 ) -> SpatialAttrs:
-    """Create a ``SpatialAttrs`` dict (r2, strict 2D) from keyword arguments."""
-    result = SpatialAttrs({"spatial:dimensions": dimensions})
+    """Create a ``SpatialAttrs`` dict (r3, strict 2D) from keyword arguments."""
+    result = SpatialAttrs()
+    if dimensions is not None:
+        result["spatial:dimensions"] = dimensions
     if bbox is not None:
         result["spatial:bbox"] = bbox
     if transform_type is not None:
@@ -135,11 +140,11 @@ def extract(
 
 
 def validate(data: Mapping[str, JsonValue]) -> SpatialAttrs:
-    """Validate spatial (r2) convention data: strict 2D, positive shape items."""
-    if "spatial:dimensions" not in data:
-        msg = "'spatial:dimensions' is required"
-        raise ValueError(msg)
+    """Validate spatial (r3) convention data: strict 2D, positive shape items.
 
+    ``spatial:dimensions`` is not required: upstream requires it only for
+    ``node_type == "array"``, which is not visible from *data* alone.
+    """
     for key, expected in _VALID_LENGTHS.items():
         if key in data:
             value = data[key]
