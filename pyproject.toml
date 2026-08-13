@@ -1,5 +1,9 @@
 [build-system]
-requires = ["hatchling>=1.26", "hatch-vcs"]
+# Capped below 1.32: hatchling 1.32.0 emits `Metadata-Version: 2.5` (PEP 794),
+# which `twine check --strict` rejects because twine's pinned `packaging` (26.2)
+# only knows metadata versions up to 2.4. Drop the cap once the toolchain used by
+# hynek/build-and-inspect-python-package ships packaging >=26.3.
+requires = ["hatchling>=1.26,<1.32", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 
