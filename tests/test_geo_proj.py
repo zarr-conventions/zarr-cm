@@ -7,7 +7,7 @@ import jsonschema
 import pytest
 from conftest import as_sequence, wrap_attrs
 
-from zarr_cm import JsonDict, geo_proj
+from zarr_cm import JSONDict, geo_proj
 from zarr_cm.geo_proj import CMO, GeoProjAttrs
 
 # geo_proj is a backward-compat shim that re-exports the latest proj revision
@@ -129,7 +129,7 @@ def test_create_wkt2() -> None:
 
 
 def test_create_projjson() -> None:
-    pj: JsonDict = {"type": "GeographicCRS"}
+    pj: JSONDict = {"type": "GeographicCRS"}
     result = geo_proj.create(projjson=pj)
     assert result == {"proj:projjson": pj}
 

@@ -6,13 +6,19 @@ they also run under pytest to confirm the runtime behavior matches.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import zarr_cm
+
+if TYPE_CHECKING:
+    from zarr_metadata import ZarrV3GroupMetadataJSON
+
 from zarr_cm import (
     ConventionName,
     GeoProjAttrs,
     GroupMetadata,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     SpatialAttrs,
     SpatialConventionAttrs,
     create_many,
@@ -23,8 +29,8 @@ from zarr_cm import (
 
 def test_json_aliases_are_public() -> None:
     # (1) Referencing the public aliases must type-check (and resolve at runtime).
-    d: JsonDict = {"a": 1}
-    v: JsonValue = [1, "b", {"c": True}]
+    d: JSONDict = {"a": 1}
+    v: JSONValue = [1, "b", {"c": True}]
     assert d == {"a": 1}
     assert v == [1, "b", {"c": True}]
 
@@ -88,7 +94,7 @@ def test_narrowed_documents_chain_and_widen() -> None:
 
     The `attributes` type parameter is covariant (the field is `ReadOnly`), so
     `GroupMetadata[SpatialConventionAttrs]` is assignable to bare
-    `GroupMetadata` -- whose parameter defaults to `Mapping[str, JsonValue]` --
+    `GroupMetadata` -- whose parameter defaults to `Mapping[str, JSONValue]` --
     and validators chain.
 
     Narrowing does not accumulate: each single-convention validator returns its
@@ -105,3 +111,34 @@ def test_narrowed_documents_chain_and_widen() -> None:
     takes_wide(narrowed)
     again = zarr_cm.validate_group_metadata(narrowed)
     assert again is narrowed
+
+
+def test_jsonvalue_is_zarr_metadata_jsonvalue() -> None:
+    """(6) One definition of "a JSON value" across both packages.
+
+    `zarr_cm.JSONValue` *is* `zarr_metadata.JSONValue` -- the same
+    `TypeAliasType` object re-exported, not a lookalike -- so the two packages'
+    types unify instead of being structurally-similar strangers.
+    """
+    import zarr_metadata  # noqa: PLC0415
+
+    assert zarr_cm.JSONValue is zarr_metadata.JSONValue
+
+
+def test_unifies_with_zarr_metadata_documents() -> None:
+    """(7) zarr-cm attributes flow into zarr-metadata documents without casts.
+
+    zarr-cm used to define its own recursive JSON alias, which pyright would
+    not unify with zarr-metadata's, so building a `ZarrV3GroupMetadataJSON`
+    from a zarr-cm attributes dict needed a cast. With one shared `JSONValue`
+    this must type-check bare.
+    """
+    attrs = spatial.insert({}, spatial.create(bbox=[0.0, 0.0, 1.0, 1.0]))
+    doc: ZarrV3GroupMetadataJSON = {
+        "zarr_format": 3,
+        "node_type": "group",
+        "attributes": attrs,
+    }
+    # ...and zarr-metadata documents flow into our validators.
+    narrowed = spatial.validate_group_metadata(doc)
+    assert narrowed is doc

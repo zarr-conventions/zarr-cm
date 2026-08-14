@@ -21,8 +21,8 @@ from zarr_cm._core import (
     ConventionMetadataObject,
     GroupMetadata,
     GroupMetadataInput,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     NodeMetadataInput,
     NodeType,
     convention_attributes,
@@ -45,7 +45,7 @@ SpatialAttrs = TypedDict(
         "spatial:shape": NotRequired[Sequence[int]],
         "spatial:registration": NotRequired[str],
     },
-    extra_items=JsonValue,
+    extra_items=JSONValue,
 )
 
 SpatialConventionAttrs = TypedDict(
@@ -59,7 +59,7 @@ SpatialConventionAttrs = TypedDict(
         "spatial:shape": NotRequired[Sequence[int]],
         "spatial:registration": NotRequired[str],
     },
-    extra_items=JsonValue,
+    extra_items=JSONValue,
 )
 
 # UUID identifies the convention *family*, not the revision; it is shared with
@@ -160,15 +160,15 @@ def create_convention_attrs(
 
 
 def insert(
-    attrs: Mapping[str, JsonValue], data: SpatialAttrs, *, overwrite: bool = False
-) -> JsonDict:
+    attrs: Mapping[str, JSONValue], data: SpatialAttrs, *, overwrite: bool = False
+) -> JSONDict:
     """Insert spatial (r2) convention metadata into an attributes dict."""
     return insert_convention(attrs, CMO, data, overwrite=overwrite)
 
 
 def extract(
-    attrs: Mapping[str, JsonValue],
-) -> tuple[JsonDict, SpatialAttrs]:
+    attrs: Mapping[str, JSONValue],
+) -> tuple[JSONDict, SpatialAttrs]:
     """Extract spatial (r2) convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -178,7 +178,7 @@ def extract(
     return remaining, SpatialAttrs(**convention_data)  # type: ignore[typeddict-item]
 
 
-def validate(data: Mapping[str, JsonValue]) -> SpatialAttrs:
+def validate(data: Mapping[str, JSONValue]) -> SpatialAttrs:
     """Validate spatial (r3) convention data: strict 2D, positive shape items.
 
     ``spatial:dimensions`` is not required: upstream requires it only for

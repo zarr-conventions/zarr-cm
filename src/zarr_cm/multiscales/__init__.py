@@ -25,8 +25,8 @@ from zarr_cm._core import (
     ArrayMetadataInput,
     GroupMetadata,
     GroupMetadataInput,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     NodeMetadataInput,
     detect_revision,
     node_attributes,
@@ -90,11 +90,11 @@ __all__ = [
 
 class _RevisionModule(NamedTuple):
     SCHEMA_URL: str
-    create: typing.Callable[..., typing.Mapping[str, JsonValue]]
-    insert: typing.Callable[..., JsonDict]
-    validate: typing.Callable[..., typing.Mapping[str, JsonValue]]
-    extract: typing.Callable[..., tuple[JsonDict, typing.Mapping[str, JsonValue]]]
-    create_convention_attrs: typing.Callable[..., typing.Mapping[str, JsonValue]]
+    create: typing.Callable[..., typing.Mapping[str, JSONValue]]
+    insert: typing.Callable[..., JSONDict]
+    validate: typing.Callable[..., typing.Mapping[str, JSONValue]]
+    extract: typing.Callable[..., tuple[JSONDict, typing.Mapping[str, JSONValue]]]
+    create_convention_attrs: typing.Callable[..., typing.Mapping[str, JSONValue]]
     validate_group_metadata: typing.Callable[..., object]
     validate_array_metadata: typing.Callable[..., object]
     validate_node_metadata: typing.Callable[..., object]
@@ -123,13 +123,13 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
 }
 
 
-def _resolve_read_revision(attrs: Mapping[str, JsonValue], revision: str | None) -> str:
+def _resolve_read_revision(attrs: Mapping[str, JSONValue], revision: str | None) -> str:
     if revision is not None:
         return revision
     return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
 
 
-def detect(attrs: Mapping[str, JsonValue]) -> str | None:
+def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the multiscales convention.
 
     Returns the label (``"r2"``), or ``None`` if the convention is
@@ -170,35 +170,35 @@ def create(*args: object, revision: str = LATEST, **kwargs: object) -> object:
 
 @typing.overload
 def insert(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     data: MultiscalesAttrsR2,
     *,
     overwrite: bool = False,
-) -> JsonDict: ...
+) -> JSONDict: ...
 
 
 @typing.overload
 def insert(
-    attrs: Mapping[str, JsonValue],
-    data: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
+    data: Mapping[str, JSONValue],
     *,
     revision: str,
     overwrite: bool = False,
-) -> JsonDict: ...
+) -> JSONDict: ...
 
 
 def insert(
-    attrs: Mapping[str, JsonValue],
-    data: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
+    data: Mapping[str, JSONValue],
     *,
     revision: str = LATEST,
     overwrite: bool = False,
-) -> JsonDict:
+) -> JSONDict:
     return _revision(revision).insert(attrs, data, overwrite=overwrite)
 
 
 def validate(
-    data: Mapping[str, JsonValue], *, revision: str | None = None
+    data: Mapping[str, JSONValue], *, revision: str | None = None
 ) -> MultiscalesAttrsR2:
     return typing.cast(
         "MultiscalesAttrsR2",
@@ -207,10 +207,10 @@ def validate(
 
 
 def extract(
-    attrs: Mapping[str, JsonValue], *, revision: str | None = None
-) -> tuple[JsonDict, MultiscalesAttrsR2]:
+    attrs: Mapping[str, JSONValue], *, revision: str | None = None
+) -> tuple[JSONDict, MultiscalesAttrsR2]:
     return typing.cast(
-        "tuple[JsonDict, MultiscalesAttrsR2]",
+        "tuple[JSONDict, MultiscalesAttrsR2]",
         _revision(_resolve_read_revision(attrs, revision)).extract(attrs),
     )
 

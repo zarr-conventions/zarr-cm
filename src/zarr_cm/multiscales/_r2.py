@@ -27,8 +27,8 @@ from zarr_cm._core import (
     ConventionMetadataObject,
     GroupMetadata,
     GroupMetadataInput,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     NodeMetadataInput,
     convention_attributes,
     extract_convention,
@@ -37,14 +37,14 @@ from zarr_cm._core import (
 )
 
 
-class Transform(TypedDict, extra_items=JsonValue):
+class Transform(TypedDict, extra_items=JSONValue):
     """Coordinate transformation with scale and translation."""
 
     scale: NotRequired[Sequence[float]]
     translation: NotRequired[Sequence[float]]
 
 
-class LayoutObject(TypedDict, extra_items=JsonValue):
+class LayoutObject(TypedDict, extra_items=JSONValue):
     """A single resolution level in a multiscale pyramid."""
 
     asset: str
@@ -53,14 +53,14 @@ class LayoutObject(TypedDict, extra_items=JsonValue):
     resampling_method: NotRequired[str]
 
 
-class MultiscalesAttrs(TypedDict, extra_items=JsonValue):
+class MultiscalesAttrs(TypedDict, extra_items=JSONValue):
     """Multiscale pyramid layout and metadata."""
 
     layout: Sequence[LayoutObject]
     resampling_method: NotRequired[str]
 
 
-class MultiscalesConventionAttrs(TypedDict, extra_items=JsonValue):
+class MultiscalesConventionAttrs(TypedDict, extra_items=JSONValue):
     """Attributes dict containing multiscales convention metadata."""
 
     zarr_conventions: Sequence[ConventionMetadataObject]
@@ -128,8 +128,8 @@ def create_convention_attrs(
 
 
 def insert(
-    attrs: Mapping[str, JsonValue], data: MultiscalesAttrs, *, overwrite: bool = False
-) -> JsonDict:
+    attrs: Mapping[str, JSONValue], data: MultiscalesAttrs, *, overwrite: bool = False
+) -> JSONDict:
     """Insert multiscales convention metadata into an attributes dict."""
     return insert_convention(
         attrs,
@@ -140,8 +140,8 @@ def insert(
 
 
 def extract(
-    attrs: Mapping[str, JsonValue],
-) -> tuple[JsonDict, MultiscalesAttrs]:
+    attrs: Mapping[str, JSONValue],
+) -> tuple[JSONDict, MultiscalesAttrs]:
     """Extract multiscales convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -156,7 +156,7 @@ def extract(
     return remaining, MultiscalesAttrs(**convention_data["multiscales"])  # type: ignore[typeddict-item]
 
 
-def validate(data: Mapping[str, JsonValue]) -> MultiscalesAttrs:
+def validate(data: Mapping[str, JSONValue]) -> MultiscalesAttrs:
     """Validate multiscales convention data.
 
     ``layout`` must have at least one item, and each layout entry

@@ -13,8 +13,8 @@ from zarr_cm._core import (
     ConventionMetadataObject,
     GroupMetadata,
     GroupMetadataInput,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     NodeMetadataInput,
     NodeType,
     convention_attributes,
@@ -28,21 +28,21 @@ if TYPE_CHECKING:
     from collections.abc import Mapping
 
 
-class UCUM(TypedDict, extra_items=JsonValue):
+class UCUM(TypedDict, extra_items=JSONValue):
     """Unified Code for Units of Measurement information."""
 
     unit: NotRequired[str]
     version: NotRequired[str]
 
 
-class UomAttrs(TypedDict, extra_items=JsonValue):
+class UomAttrs(TypedDict, extra_items=JSONValue):
     """Unit of measurement metadata for a Zarr array."""
 
     ucum: UCUM
     description: NotRequired[str]
 
 
-class UomConventionAttrs(TypedDict, extra_items=JsonValue):
+class UomConventionAttrs(TypedDict, extra_items=JSONValue):
     """Attributes dict containing uom convention metadata."""
 
     zarr_conventions: Sequence[ConventionMetadataObject]
@@ -66,7 +66,7 @@ CONVENTION_KEYS: Final = {"uom"}
 _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 
 
-def detect(attrs: Mapping[str, JsonValue]) -> str | None:
+def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the uom convention.
 
     Uom has a single revision (``"v1"``); returns it when present with the
@@ -108,8 +108,8 @@ def create_convention_attrs(
 
 
 def insert(
-    attrs: Mapping[str, JsonValue], data: UomAttrs, *, overwrite: bool = False
-) -> JsonDict:
+    attrs: Mapping[str, JSONValue], data: UomAttrs, *, overwrite: bool = False
+) -> JSONDict:
     """Insert uom convention metadata into an attributes dict."""
     return insert_convention(
         attrs,
@@ -120,8 +120,8 @@ def insert(
 
 
 def extract(
-    attrs: Mapping[str, JsonValue],
-) -> tuple[JsonDict, UomAttrs]:
+    attrs: Mapping[str, JSONValue],
+) -> tuple[JSONDict, UomAttrs]:
     """Extract uom convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
@@ -136,7 +136,7 @@ def extract(
     return remaining, UomAttrs(**convention_data["uom"])  # type: ignore[typeddict-item]
 
 
-def validate(data: Mapping[str, JsonValue]) -> UomAttrs:
+def validate(data: Mapping[str, JSONValue]) -> UomAttrs:
     """Validate uom convention data.
 
     ``ucum`` must be present.

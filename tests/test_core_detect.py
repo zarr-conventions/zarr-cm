@@ -7,14 +7,14 @@ import pytest
 from zarr_cm._core import resolve_revision_label
 
 if TYPE_CHECKING:
-    from zarr_cm import JsonDict
+    from zarr_cm import JSONDict
 
 UUID = "test-uuid-1234"
 URLS = {"r1": "https://example/r1.json", "r2": "https://example/r2.json"}
 
 
-def _attrs(schema_url: str | None) -> JsonDict:
-    cmo: JsonDict = {"uuid": UUID}
+def _attrs(schema_url: str | None) -> JSONDict:
+    cmo: JSONDict = {"uuid": UUID}
     if schema_url is not None:
         cmo["schema_url"] = schema_url
     return {"zarr_conventions": [cmo]}

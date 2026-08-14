@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import sys
 from collections.abc import Mapping, Sequence
 from typing import (
     TYPE_CHECKING,
@@ -14,6 +13,27 @@ from typing import (
 
 from typing_extensions import ReadOnly, TypeAliasType, TypedDict, TypeVar
 
+# `JSONValue` is zarr-metadata's, imported under its own name: one definition
+# of "a JSON value" across both packages, so their document types and ours
+# unify without casts. The convention modules and the public package import
+# it from here. The properties this package relies on hold upstream by
+# construction:
+#
+# * The array arm is the covariant ``Sequence`` (not the invariant
+#   ``list``/``tuple``), so concrete JSON-shaped values -- and the convention
+#   ``TypedDict``s, whose fields carry narrower types like ``Sequence[str]`` --
+#   are assignable to it. A JSON array is still a ``list`` at runtime; the
+#   ``Sequence`` arm just declines to require a particular container at the
+#   type level.
+# * It is a real recursive ``TypeAliasType``, which is what lets a downstream
+#   pydantic model embed the convention ``TypedDict``s (which use it as
+#   ``extra_items``) without ``RecursionError`` in ``model_rebuild()``. See
+#   https://github.com/zarr-conventions/zarr-cm/issues/18.
+#
+# This import is the reason zarr-metadata is a runtime dependency:
+# ``extra_items=JSONValue`` is evaluated at class-creation time.
+from zarr_metadata import JSONValue
+
 if TYPE_CHECKING:
     from collections.abc import Callable
 
@@ -25,36 +45,15 @@ NodeType = Literal["array", "group"]
 NODE_TYPES: Final[frozenset[NodeType]] = frozenset({"array", "group"})
 """Every value `node_type` may take in a Zarr v3 metadata document."""
 
-JsonPrimitive = bool | int | float | str | None
-# A read-only, covariant *type-level* view of a JSON value. ``Sequence`` and
-# ``Mapping`` are covariant in their item/value type (unlike the invariant
-# ``list``/``dict``), so concrete JSON-shaped values -- and the convention
-# ``TypedDict``s -- are assignable to it. This says nothing about the concrete
-# runtime container: a JSON array is a ``list`` at runtime (that is what
-# ``json.loads`` produces and what ``json.dumps``/jsonschema expect); the
-# ``Sequence`` arm just declines to *require* a particular container at the type
-# level so both lists and tuples type-check.
-#
-# ``JsonValue`` is a *recursive* alias and MUST be a real ``TypeAliasType`` (the
-# PEP 695 ``type`` form), not a bare ``X = ... "X" ...`` union: the convention
-# ``TypedDict``s use it as ``extra_items``, and a downstream pydantic model that
-# embeds one of those ``TypedDict``s would otherwise raise ``RecursionError`` in
-# ``model_rebuild()``. On Python 3.12+ we use the native ``type`` statement (from
-# ``_json_alias``, which pyright resolves cleanly); on 3.11 -- where ``type`` is a
-# syntax error -- we fall back to the runtime-equivalent ``TypeAliasType``. The
-# project type-checks at ``pythonVersion = 3.12`` so the native form is the one
-# pyright sees. See https://github.com/zarr-conventions/zarr-cm/issues/18.
-if sys.version_info >= (3, 12):
-    from ._json_alias import JsonDict, JsonValue
-else:  # pragma: no cover - exercised only on Python 3.11
-    JsonValue = TypeAliasType(
-        "JsonValue",
-        JsonPrimitive | Sequence["JsonValue"] | Mapping[str, "JsonValue"],
-    )
-    JsonDict = TypeAliasType("JsonDict", dict[str, JsonValue])
+JSONDict = TypeAliasType("JSONDict", dict[str, JSONValue])
+"""A mutable JSON object: what `json.loads` yields for a JSON document.
+
+Named to match zarr-metadata's `JSONValue` grammar; zarr-metadata itself
+exports no dict alias, so this is the one JSON name this package defines.
+"""
 
 
-AttrsT_co = TypeVar("AttrsT_co", covariant=True, default=Mapping[str, JsonValue])
+AttrsT_co = TypeVar("AttrsT_co", covariant=True, default=Mapping[str, JSONValue])
 """Type parameter for a metadata document's `attributes` field.
 
 Covariant, so a document whose attributes satisfy a *narrower* TypedDict is
@@ -65,14 +64,14 @@ unvalidated form.
 """
 
 
-class ArrayMetadata(TypedDict, Generic[AttrsT_co], extra_items=JsonValue):
+class ArrayMetadata(TypedDict, Generic[AttrsT_co], extra_items=JSONValue):
     """A Zarr v3 array metadata document, generic over its `attributes` type.
 
     The type parameter states what is known about `attributes`. Bare
     `ArrayMetadata` is the wide form -- attributes are an arbitrary JSON object
     -- and the `validate_*_metadata` functions narrow it: validating against
     spatial returns `ArrayMetadata[SpatialConventionAttrs]`, so the validated
-    document's convention keys are typed rather than `JsonValue`.
+    document's convention keys are typed rather than `JSONValue`.
 
     `attributes` is `ReadOnly`, which is what makes the parameter covariant; the
     other v3 array fields (`shape`, `data_type`, `codecs`, ...) fall under
@@ -89,7 +88,7 @@ class ArrayMetadata(TypedDict, Generic[AttrsT_co], extra_items=JsonValue):
     attributes: ReadOnly[AttrsT_co]
 
 
-class GroupMetadata(TypedDict, Generic[AttrsT_co], extra_items=JsonValue):
+class GroupMetadata(TypedDict, Generic[AttrsT_co], extra_items=JSONValue):
     """A Zarr v3 group metadata document, generic over its `attributes` type.
 
     The group counterpart of `ArrayMetadata`; see there for the semantics.
@@ -104,15 +103,9 @@ ArrayMetadataInput: TypeAlias = "ZarrV3ArrayMetadataJSON | ArrayMetadata"
 """What an array validator accepts: a raw `zarr-metadata` document or ours.
 
 The second arm is the wide `ArrayMetadata` (its type parameter defaults to
-`Mapping[str, JsonValue]`), and covariance means every *narrowed*
+`Mapping[str, JSONValue]`), and covariance means every *narrowed*
 `ArrayMetadata[...]` is assignable to it too -- so validators chain:
 `proj.validate_array_metadata(spatial.validate_array_metadata(doc))`.
-
-`zarr-metadata` is a typing-only dependency: it is imported under
-`TYPE_CHECKING` and the validators read documents structurally at runtime, so
-it stays out of the minimal runtime dependency set. The test suite runs
-without it (`just test-ci` installs the test group alone), which keeps that
-honest.
 """
 
 GroupMetadataInput: TypeAlias = "ZarrV3GroupMetadataJSON | GroupMetadata"
@@ -140,7 +133,7 @@ def _is_sequence(value: object) -> TypeGuard[Sequence[object]]:
     )
 
 
-class ConventionMetadataObject(TypedDict, extra_items=JsonValue):
+class ConventionMetadataObject(TypedDict, extra_items=JSONValue):
     """A convention metadata object for the ``zarr_conventions`` array."""
 
     uuid: NotRequired[str]
@@ -150,13 +143,13 @@ class ConventionMetadataObject(TypedDict, extra_items=JsonValue):
     description: NotRequired[str]
 
 
-class ConventionAttrs(TypedDict, extra_items=JsonValue):
+class ConventionAttrs(TypedDict, extra_items=JSONValue):
     """Attributes dict with a ``zarr_conventions`` array."""
 
     zarr_conventions: Sequence[ConventionMetadataObject]
 
 
-def validate_json_value(value: object) -> JsonValue:
+def validate_json_value(value: object) -> JSONValue:
     """Validate and return a JSON-shaped value."""
     if value is None or isinstance(value, bool | int | float | str):
         return value
@@ -168,12 +161,12 @@ def validate_json_value(value: object) -> JsonValue:
     raise TypeError(msg)
 
 
-def validate_json_object(value: object) -> JsonDict:
+def validate_json_object(value: object) -> JSONDict:
     """Validate and return a mutable JSON object with string keys."""
     if not _is_mapping(value):
         msg = f"expected a JSON object, got {type(value).__name__}"
         raise TypeError(msg)
-    result: JsonDict = {}
+    result: JSONDict = {}
     for key, item in value.items():
         if not isinstance(key, str):
             msg = f"expected JSON object keys to be str, got {type(key).__name__}"
@@ -208,14 +201,14 @@ def validate_convention_metadata_objects(
     return result
 
 
-def validate_convention_metadata_object(cmo: JsonDict) -> None:
+def validate_convention_metadata_object(cmo: JSONDict) -> None:
     """Validate that a ConventionMetadataObject has at least one identifier."""
     if not any(k in cmo for k in ("uuid", "schema_url", "spec_url")):
         msg = "ConventionMetadataObject must have at least one of 'uuid', 'schema_url', or 'spec_url'"
         raise ValueError(msg)
 
 
-def node_attributes(metadata: Mapping[str, object]) -> JsonDict:
+def node_attributes(metadata: Mapping[str, object]) -> JSONDict:
     """Return the `attributes` object of a Zarr v3 node metadata document.
 
     `attributes` is optional in the v3 spec; a document without it is treated
@@ -256,7 +249,7 @@ def node_type_of(
     return node_type
 
 
-def convention_present(attrs: Mapping[str, JsonValue], uuid: str) -> bool:
+def convention_present(attrs: Mapping[str, JSONValue], uuid: str) -> bool:
     """Report whether *attrs* declares the convention identified by *uuid*."""
     return any(
         cmo.get("uuid") == uuid
@@ -270,7 +263,7 @@ def convention_attributes(
     convention: str,
     uuid: str,
     expected_node_type: NodeType | None = None,
-) -> JsonDict:
+) -> JSONDict:
     """Return the `attributes` of a v3 node document that declares *convention*.
 
     This is the preamble every convention's node validators share, and only the
@@ -296,12 +289,12 @@ def convention_attributes(
 
 
 def insert_convention(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     cmo: ConventionMetadataObject,
-    convention_data: Mapping[str, JsonValue],
+    convention_data: Mapping[str, JSONValue],
     *,
     overwrite: bool = False,
-) -> JsonDict:
+) -> JSONDict:
     """Insert convention metadata into an attributes dict.
 
     Returns a new dict with the convention data merged in and the CMO
@@ -334,18 +327,18 @@ def insert_convention(
 
 
 def extract_convention(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     convention_keys: set[str],
     match_fn: Callable[[ConventionMetadataObject], bool],
-) -> tuple[JsonDict, JsonDict]:
+) -> tuple[JSONDict, JSONDict]:
     """Extract convention metadata from an attributes dict.
 
     Returns ``(remaining_attrs, convention_data)`` where the matching CMO
     is removed from ``zarr_conventions`` and the convention-specific keys
     are separated out.
     """
-    remaining: JsonDict = {}
-    convention_data: JsonDict = {}
+    remaining: JSONDict = {}
+    convention_data: JSONDict = {}
 
     for key, value in attrs.items():
         if key == "zarr_conventions":
@@ -366,7 +359,7 @@ def extract_convention(
 
 
 def resolve_revision_label(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     uuid: str,
     schema_url_by_revision: dict[str, str],
     convention_name: str,
@@ -386,7 +379,7 @@ def resolve_revision_label(
 
 
 def detect_revision(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     uuid: str,
     schema_url_by_revision: dict[str, str],
 ) -> str | None:

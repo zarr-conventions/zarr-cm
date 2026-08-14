@@ -24,8 +24,8 @@ from ._core import (
     ConventionMetadataObject,
     GroupMetadata,
     GroupMetadataInput,
-    JsonDict,
-    JsonValue,
+    JSONDict,
+    JSONValue,
     NodeMetadataInput,
     NodeMetadataInputT,
     NodeType,
@@ -72,14 +72,14 @@ class _ConventionModule(NamedTuple):
     UUID: str
     CONVENTION_KEYS: set[str]
     validate: typing.Callable[..., object]
-    insert: typing.Callable[..., JsonDict]
-    extract: typing.Callable[..., tuple[JsonDict, object]]
-    detect: typing.Callable[[Mapping[str, JsonValue]], str | None]
+    insert: typing.Callable[..., JSONDict]
+    extract: typing.Callable[..., tuple[JSONDict, object]]
+    detect: typing.Callable[[Mapping[str, JSONValue]], str | None]
     validate_group_metadata: typing.Callable[..., object]
     validate_array_metadata: typing.Callable[..., object]
     validate_node_metadata: typing.Callable[..., object]
     resolve_read_revision: (
-        typing.Callable[[Mapping[str, JsonValue], str | None], str] | None
+        typing.Callable[[Mapping[str, JSONValue], str | None], str] | None
     ) = None
 
 
@@ -161,7 +161,7 @@ MultiConventionAttrs = TypedDict(
         # geo-proj
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
-        "proj:projjson": NotRequired[JsonDict],
+        "proj:projjson": NotRequired[JSONDict],
         # spatial
         "spatial:dimensions": NotRequired[Sequence[str]],
         "spatial:bbox": NotRequired[Sequence[float]],
@@ -176,7 +176,7 @@ MultiConventionAttrs = TypedDict(
         # uom
         "uom": NotRequired[UomAttrs],
     },
-    extra_items=JsonValue,
+    extra_items=JSONValue,
 )
 
 
@@ -210,7 +210,7 @@ def _read_rev_kwargs(
     mod: _ConventionModule,
     revisions: dict[ConventionName, str] | None,
     name: ConventionName,
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
 ) -> dict[str, str]:
     """Resolve the revision for a READ over *attrs* and return it as kwargs.
 
@@ -227,7 +227,7 @@ def _read_rev_kwargs(
     return {"revision": mod.resolve_read_revision(attrs, None)}
 
 
-def _detect_conventions(attrs: Mapping[str, JsonValue]) -> frozenset[ConventionName]:
+def _detect_conventions(attrs: Mapping[str, JSONValue]) -> frozenset[ConventionName]:
     """Identify which conventions are present by matching UUIDs in zarr_conventions."""
     conventions = validate_convention_metadata_objects(attrs.get("zarr_conventions"))
     uuids = {cmo.get("uuid") for cmo in conventions}
@@ -235,10 +235,10 @@ def _detect_conventions(attrs: Mapping[str, JsonValue]) -> frozenset[ConventionN
 
 
 def create_many(
-    conventions: Mapping[ConventionName, Mapping[str, JsonValue]],
+    conventions: Mapping[ConventionName, Mapping[str, JSONValue]],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> JsonDict:
+) -> JSONDict:
     """Create and insert multiple conventions into a single attributes dict.
 
     Parameters
@@ -253,11 +253,11 @@ def create_many(
 
     Returns
     -------
-    JsonDict
+    JSONDict
         A new attributes dict containing all convention data and a
         combined ``zarr_conventions`` array.
     """
-    result: JsonDict = {}
+    result: JSONDict = {}
     for name, data in conventions.items():
         mod = _get_module(name)
         rk = _rev_kwargs(mod, revisions, name)
@@ -267,11 +267,11 @@ def create_many(
 
 
 def validate_many(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     conventions: Iterable[ConventionName],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> Mapping[str, JsonValue]:
+) -> Mapping[str, JSONValue]:
     """Validate multiple conventions within an attributes dict.
 
     Parameters
@@ -287,7 +287,7 @@ def validate_many(
 
     Returns
     -------
-    JsonDict
+    JSONDict
         The input *attrs* (pass-through on success).
     """
     for name in conventions:
@@ -299,12 +299,12 @@ def validate_many(
 
 
 def insert_many(
-    attrs: Mapping[str, JsonValue],
-    conventions: Mapping[ConventionName, Mapping[str, JsonValue]],
+    attrs: Mapping[str, JSONValue],
+    conventions: Mapping[ConventionName, Mapping[str, JSONValue]],
     *,
     overwrite: bool = False,
     revisions: dict[ConventionName, str] | None = None,
-) -> JsonDict:
+) -> JSONDict:
     """Insert multiple conventions into an attributes dict.
 
     Parameters
@@ -323,7 +323,7 @@ def insert_many(
 
     Returns
     -------
-    JsonDict
+    JSONDict
         A new attributes dict with all convention data merged in.
     """
     result = dict(attrs)
@@ -336,11 +336,11 @@ def insert_many(
 
 
 def extract_many(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     conventions: Iterable[ConventionName],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> tuple[JsonDict, dict[ConventionName, JsonDict]]:
+) -> tuple[JSONDict, dict[ConventionName, JSONDict]]:
     """Extract multiple conventions from an attributes dict.
 
     Parameters
@@ -356,12 +356,12 @@ def extract_many(
 
     Returns
     -------
-    tuple[JsonDict, dict[str, JsonDict]]
+    tuple[JSONDict, dict[str, JSONDict]]
         ``(remaining_attrs, extracted)`` where *extracted* maps
         convention names to their convention data dicts.
     """
     remaining = dict(attrs)
-    extracted: dict[ConventionName, JsonDict] = {}
+    extracted: dict[ConventionName, JSONDict] = {}
     for name in conventions:
         mod = _get_module(name)
         rk = _read_rev_kwargs(mod, revisions, name, remaining)
@@ -371,10 +371,10 @@ def extract_many(
 
 
 def validate_all(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> Mapping[str, JsonValue]:
+) -> Mapping[str, JSONValue]:
     """Validate all detected conventions within an attributes dict.
 
     Detects which conventions are present by matching UUIDs in
@@ -391,17 +391,17 @@ def validate_all(
 
     Returns
     -------
-    JsonDict
+    JSONDict
         The input *attrs* (pass-through on success).
     """
     return validate_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
 
 def extract_all(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
     *,
     revisions: dict[ConventionName, str] | None = None,
-) -> tuple[JsonDict, dict[ConventionName, JsonDict]]:
+) -> tuple[JSONDict, dict[ConventionName, JSONDict]]:
     """Extract all detected conventions from an attributes dict.
 
     Detects which conventions are present by matching UUIDs in
@@ -418,7 +418,7 @@ def extract_all(
 
     Returns
     -------
-    tuple[JsonDict, dict[str, JsonDict]]
+    tuple[JSONDict, dict[str, JSONDict]]
         ``(remaining_attrs, extracted)`` where *extracted* maps
         convention names to their convention data dicts.
     """
@@ -504,7 +504,7 @@ def _validate_node_metadata(
 
 
 def detect_revisions(
-    attrs: Mapping[str, JsonValue],
+    attrs: Mapping[str, JSONValue],
 ) -> dict[ConventionName, str | None]:
     """Map each present convention to the revision label it claims.
 
@@ -536,8 +536,8 @@ __all__ = [
     "GeoProjConventionAttrsR3",
     "GroupMetadata",
     "GroupMetadataInput",
-    "JsonDict",
-    "JsonValue",
+    "JSONDict",
+    "JSONValue",
     "LayoutObject",
     "LayoutObjectR2",
     "LicenseAttrs",

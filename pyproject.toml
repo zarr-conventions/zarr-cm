@@ -37,6 +37,13 @@ dependencies = [
   # PEP 728 ``extra_items`` on TypedDicts is not in any released CPython stdlib
   # yet; typing_extensions provides it at runtime for all supported versions.
   "typing_extensions>=4.13",
+  # Supplies `JSONValue` (aliased as this package's `JsonValue`) and the v3
+  # document TypedDicts the node validators are typed with. A runtime
+  # dependency because `extra_items=JsonValue` is evaluated at class-creation
+  # time. >=0.5: first release whose JSONValue has the covariant `Sequence`
+  # array arm the convention TypedDicts rely on. Its only dependency is
+  # typing_extensions, which this package already carries.
+  "zarr-metadata>=0.5",
 ]
 
 [project.urls]
@@ -55,20 +62,14 @@ test = [
   "pytest-examples >=0.0.14",
   "jsonschema >=4",
   # Downstream-integration regression: a pydantic model embedding a convention
-  # TypedDict must rebuild without RecursionError (see issue #18). Runs across
-  # the CI Python matrix so both the 3.12+ `type` alias and the 3.11
-  # TypeAliasType fallback are exercised.
+  # TypedDict must rebuild without RecursionError (see issue #18). The
+  # recursive alias behind that (JsonValue = zarr_metadata.JSONValue) is a
+  # TypeAliasType on every supported Python.
   "pydantic >=2",
 ]
 typecheck = [
   "pyright >=1.1.386",
   "types-jsonschema",
-  # Typing-only: the node-metadata validators annotate their arguments with
-  # zarr-metadata's v3 TypedDicts, imported under TYPE_CHECKING. Deliberately in
-  # this group and NOT in [project].dependencies, which is kept minimal --
-  # `just test-ci` installs the test group alone, so the suite proves the
-  # validators work without it.
-  "zarr-metadata >=0.4",
 ]
 dev = [
   { include-group = "test" },
@@ -128,11 +129,6 @@ enableExperimentalFeatures = true
 
 
 [tool.ruff]
-# _json_alias.py uses the PEP 695 ``type`` statement and is imported only on
-# Python 3.12+ (see zarr_cm/_core.py). Lint it as 3.12 so the ``type`` syntax is
-# accepted; the rest of the package keeps the project-wide 3.11 floor.
-[tool.ruff.per-file-target-version]
-"src/zarr_cm/_json_alias.py" = "py312"
 
 [tool.ruff.lint]
 extend-select = [

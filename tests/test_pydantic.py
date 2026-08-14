@@ -1,8 +1,8 @@
 """Downstream pydantic integration regression test for issue #18.
 
 A pydantic model that embeds one of zarr-cm's convention ``TypedDict``s (which
-use ``JsonValue`` as PEP 728 ``extra_items``) used to raise ``RecursionError``
-in ``model_rebuild()``, because ``JsonValue`` was an implicit recursive union
+use ``JSONValue`` as PEP 728 ``extra_items``) used to raise ``RecursionError``
+in ``model_rebuild()``, because ``JSONValue`` was an implicit recursive union
 (``X = ... "X" ...``) rather than a real ``TypeAliasType``. pydantic can only
 resolve a recursive alias when it is a ``TypeAliasType`` (the PEP 695 ``type``
 form, or its ``typing_extensions`` equivalent).
@@ -39,7 +39,7 @@ def test_model_with_cmo_tuple_rebuilds() -> None:
 
 
 def test_model_with_cmo_validates_nested_extra_items() -> None:
-    """``extra_items=JsonValue`` keys must validate as recursive JSON values."""
+    """``extra_items=JSONValue`` keys must validate as recursive JSON values."""
 
     class M(BaseModel):
         convs: tuple[ConventionMetadataObject, ...]
