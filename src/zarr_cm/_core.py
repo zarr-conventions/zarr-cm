@@ -267,17 +267,16 @@ def convention_present(attrs: Mapping[str, JSONValue], uuid: str) -> bool:
 def convention_attributes(
     metadata: Mapping[str, object],
     cmo: ConventionMetadataObject,
-    *,
-    expected_node_type: NodeType | None = None,
 ) -> JSONDict:
     """Return the `attributes` of a v3 node document that declares *cmo*'s convention.
 
-    This is the preamble every convention's node validators share, and only the
-    preamble: the document is Zarr v3, its `node_type` is a known one (and the
-    expected one), `attributes` is a JSON object, and the convention is actually
-    declared there. What the convention then requires of those attributes --
-    which keys, on which node type, or whether the node type is allowed at all
-    -- is the convention's own business, expressed in its own module.
+    This does the declaration half of a node validator's preamble: `attributes`
+    is a JSON object and the convention is actually named in its
+    `zarr_conventions`. Document shape -- Zarr v3, a known and expected
+    `node_type` -- is the validator's own assertion, made by calling
+    `node_type_of()` with the node type that validator is *for*; it is not this
+    function's business, since which node types a convention tolerates is a
+    convention rule, not a declaration fact.
 
     A convention identifies itself by its convention metadata object -- the same
     `CMO` constant it writes into documents -- rather than by loose name/uuid
@@ -287,9 +286,7 @@ def convention_attributes(
     Args:
         metadata: The full metadata document (the contents of a node's `zarr.json`).
         cmo: The calling convention's metadata object (its module's `CMO`).
-        expected_node_type: Passed through to `node_type_of()`.
     """
-    node_type_of(metadata, expected=expected_node_type)
     attributes = node_attributes(metadata)
     uuid = cmo.get("uuid")
     if uuid is None or not convention_present(attributes, uuid):

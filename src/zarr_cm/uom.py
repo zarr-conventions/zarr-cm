@@ -16,7 +16,6 @@ from zarr_cm._core import (
     JSONDict,
     JSONValue,
     NodeMetadataInput,
-    NodeType,
     convention_attributes,
     extract_convention,
     insert_convention,
@@ -147,9 +146,9 @@ def validate(data: Mapping[str, JSONValue]) -> UomAttrs:
     return data  # type: ignore[return-value]
 
 
-def _convention_data(metadata: Mapping[str, object], node_type: NodeType) -> UomAttrs:
+def _convention_data(metadata: Mapping[str, object]) -> UomAttrs:
     """Pull this document's uom data out and run the attribute-level rules."""
-    attributes = convention_attributes(metadata, CMO, expected_node_type=node_type)
+    attributes = convention_attributes(metadata, CMO)
     _, data = extract(attributes)
     return validate(data)
 
@@ -158,7 +157,8 @@ def validate_group_metadata(
     metadata: GroupMetadataInput,
 ) -> GroupMetadata[UomConventionAttrs]:
     """Validate a v3 group metadata document against the uom convention."""
-    _convention_data(metadata, "group")
+    node_type_of(metadata, expected="group")
+    _convention_data(metadata)
     return cast("GroupMetadata[UomConventionAttrs]", metadata)
 
 
@@ -170,7 +170,8 @@ def validate_array_metadata(
     The uom convention places no node-type-specific requirements on either
     node type, so this matches `validate_group_metadata()`.
     """
-    _convention_data(metadata, "array")
+    node_type_of(metadata, expected="array")
+    _convention_data(metadata)
     return cast("ArrayMetadata[UomConventionAttrs]", metadata)
 
 

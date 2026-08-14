@@ -24,7 +24,6 @@ from zarr_cm._core import (
     JSONDict,
     JSONValue,
     NodeMetadataInput,
-    NodeType,
     convention_attributes,
     extract_convention,
     insert_convention,
@@ -217,11 +216,9 @@ def validate(data: Mapping[str, JSONValue]) -> SpatialAttrs:
     return data  # type: ignore[return-value]
 
 
-def _convention_data(
-    metadata: Mapping[str, object], node_type: NodeType
-) -> SpatialAttrs:
+def _convention_data(metadata: Mapping[str, object]) -> SpatialAttrs:
     """Pull this document's spatial data out and run the attribute-level rules."""
-    attributes = convention_attributes(metadata, CMO, expected_node_type=node_type)
+    attributes = convention_attributes(metadata, CMO)
     _, data = extract(attributes)
     return validate(data)
 
@@ -235,7 +232,8 @@ def validate_group_metadata(
     when `node_type` is `"array"`, so a group may carry the other spatial:
     keys -- a union footprint, say -- on their own.
     """
-    _convention_data(metadata, "group")
+    node_type_of(metadata, expected="group")
+    _convention_data(metadata)
     return cast("GroupMetadata[SpatialConventionAttrs]", metadata)
 
 
@@ -246,7 +244,8 @@ def validate_array_metadata(
 
     Arrays must carry `spatial:dimensions`; groups need not.
     """
-    data = _convention_data(metadata, "array")
+    node_type_of(metadata, expected="array")
+    data = _convention_data(metadata)
     if "spatial:dimensions" not in data:
         msg = "'spatial:dimensions' is required on array nodes"
         raise ValueError(msg)
