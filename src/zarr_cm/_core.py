@@ -266,31 +266,35 @@ def convention_present(attrs: Mapping[str, JSONValue], uuid: str) -> bool:
 
 def convention_attributes(
     metadata: Mapping[str, object],
+    cmo: ConventionMetadataObject,
     *,
-    convention: str,
-    uuid: str,
     expected_node_type: NodeType | None = None,
 ) -> JSONDict:
-    """Return the `attributes` of a v3 node document that declares *convention*.
+    """Return the `attributes` of a v3 node document that declares *cmo*'s convention.
 
     This is the preamble every convention's node validators share, and only the
     preamble: the document is Zarr v3, its `node_type` is a known one (and the
-    expected one), `attributes` is a JSON object, and *convention* is actually
+    expected one), `attributes` is a JSON object, and the convention is actually
     declared there. What the convention then requires of those attributes --
     which keys, on which node type, or whether the node type is allowed at all
     -- is the convention's own business, expressed in its own module.
 
+    A convention identifies itself by its convention metadata object -- the same
+    `CMO` constant it writes into documents -- rather than by loose name/uuid
+    strings at the call site. The declaration check matches on the CMO's
+    `uuid`, and error messages use its spec `name`.
+
     Args:
         metadata: The full metadata document (the contents of a node's `zarr.json`).
-        convention: Display name of the convention, used in error messages.
-        uuid: The convention's UUID, which the document must declare in
-            `attributes['zarr_conventions']`.
+        cmo: The calling convention's metadata object (its module's `CMO`).
         expected_node_type: Passed through to `node_type_of()`.
     """
     node_type_of(metadata, expected=expected_node_type)
     attributes = node_attributes(metadata)
-    if not convention_present(attributes, uuid):
-        msg = f"the {convention!r} convention is not declared in this document's 'zarr_conventions'"
+    uuid = cmo.get("uuid")
+    if uuid is None or not convention_present(attributes, uuid):
+        name = cmo.get("name") or uuid or "<unnamed>"
+        msg = f"the {name!r} convention is not declared in this document's 'zarr_conventions'"
         raise ValueError(msg)
     return attributes
 

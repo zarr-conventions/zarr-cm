@@ -103,8 +103,9 @@ def test_node_type_mismatch_rejected() -> None:
 
 
 def test_undeclared_convention_rejected() -> None:
+    # The message carries the convention's spec name, from its CMO ("spatial:").
     node = group_node(license_.insert({}, license_.create(spdx="MIT")))
-    with pytest.raises(ValueError, match="'spatial' convention is not declared"):
+    with pytest.raises(ValueError, match="'spatial:' convention is not declared"):
         spatial.validate_group_metadata(node)
 
 

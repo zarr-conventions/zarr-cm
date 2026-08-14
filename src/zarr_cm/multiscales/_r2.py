@@ -189,9 +189,7 @@ def validate_group_metadata(
     metadata: GroupMetadataInput,
 ) -> GroupMetadata[MultiscalesConventionAttrs]:
     """Validate a v3 group metadata document against multiscales (r2)."""
-    attributes = convention_attributes(
-        metadata, convention="multiscales", uuid=UUID, expected_node_type="group"
-    )
+    attributes = convention_attributes(metadata, CMO, expected_node_type="group")
     _, data = extract(attributes)
     validate(data)
     return cast("GroupMetadata[MultiscalesConventionAttrs]", metadata)

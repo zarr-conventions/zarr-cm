@@ -221,9 +221,7 @@ def _convention_data(
     metadata: Mapping[str, object], node_type: NodeType
 ) -> SpatialAttrs:
     """Pull this document's spatial data out and run the attribute-level rules."""
-    attributes = convention_attributes(
-        metadata, convention="spatial", uuid=UUID, expected_node_type=node_type
-    )
+    attributes = convention_attributes(metadata, CMO, expected_node_type=node_type)
     _, data = extract(attributes)
     return validate(data)
 

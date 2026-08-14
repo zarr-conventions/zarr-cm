@@ -158,9 +158,7 @@ def _convention_data(
     metadata: Mapping[str, object], node_type: NodeType
 ) -> GeoProjAttrs:
     """Pull this document's proj data out and run the attribute-level rules."""
-    attributes = convention_attributes(
-        metadata, convention="proj", uuid=UUID, expected_node_type=node_type
-    )
+    attributes = convention_attributes(metadata, CMO, expected_node_type=node_type)
     _, data = extract(attributes)
     return validate(data)
 
