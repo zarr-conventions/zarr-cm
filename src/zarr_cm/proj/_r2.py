@@ -2,7 +2,7 @@
 
 Snapshot of upstream main at commit d150edbde61b53e9d17520f6d107c9d3689e5910.
 Corrects the schema/spec URLs to the zarr-conventions/proj repo and adds the
-``proj:code`` authority pattern. The "exactly one of code/wkt2/projjson" rule
+`proj:code` authority pattern. The "exactly one of code/wkt2/projjson" rule
 is unchanged from r1.
 """
 
@@ -26,12 +26,12 @@ from zarr_cm._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    convention_attributes,
     extract_convention,
     insert_convention,
-    node_type_of,
 )
+from zarr_cm._node import NodeContext, node_convention_data, node_type_of, prepare_node
 
 GeoProjAttrs = TypedDict(
     "GeoProjAttrs",
@@ -83,7 +83,7 @@ def create(
     wkt2: str | None = None,
     projjson: JSONDict | None = None,
 ) -> GeoProjAttrs:
-    """Create a ``GeoProjAttrs`` dict (r2) from keyword arguments."""
+    """Create a `GeoProjAttrs` dict (r2) from keyword arguments."""
     result = GeoProjAttrs()
     if code is not None:
         result["proj:code"] = code
@@ -108,11 +108,13 @@ def create_convention_attrs(
     `insert()` instead to add this convention to attributes that already
     exist -- that is what `insert` is for.
     """
-    result: GeoProjConventionAttrs = {
-        "zarr_conventions": [CMO],
-        **create(code=code, wkt2=wkt2, projjson=projjson),
-    }
-    return result
+    return cast(
+        "GeoProjConventionAttrs",
+        {
+            "zarr_conventions": [CMO],
+            **create(code=code, wkt2=wkt2, projjson=projjson),
+        },
+    )
 
 
 def insert(
@@ -131,14 +133,14 @@ def extract(
         CONVENTION_KEYS,
         lambda cmo: cmo.get("uuid") == UUID,
     )
-    return remaining, GeoProjAttrs(**convention_data)  # type: ignore[typeddict-item]
+    return remaining, cast("GeoProjAttrs", convention_data)
 
 
 def validate(data: Mapping[str, JSONValue]) -> GeoProjAttrs:
     """Validate proj (r2) data.
 
-    Exactly one of ``proj:code``, ``proj:wkt2``, or ``proj:projjson`` must be
-    present, and ``proj:code`` (if present) must match ``^[A-Z]+:[0-9]+$``.
+    Exactly one of `proj:code`, `proj:wkt2`, or `proj:projjson` must be
+    present, and `proj:code` (if present) must match `^[A-Z]+:[0-9]+$`.
     """
     present = [k for k in ("proj:code", "proj:wkt2", "proj:projjson") if k in data]
     if len(present) != 1:
@@ -150,23 +152,30 @@ def validate(data: Mapping[str, JSONValue]) -> GeoProjAttrs:
     ):
         msg = f"'proj:code' must match {_CODE_PATTERN.pattern!r}, got {data['proj:code']!r}"
         raise ValueError(msg)
-    return data  # type: ignore[return-value]
+    if "proj:wkt2" in data and not isinstance(data["proj:wkt2"], str):
+        msg = f"'proj:wkt2' must be a string, got {type(data['proj:wkt2']).__name__}"
+        raise TypeError(msg)
+    if "proj:projjson" in data and not isinstance(data["proj:projjson"], dict):
+        msg = (
+            "'proj:projjson' must be a JSON object, "
+            f"got {type(data['proj:projjson']).__name__}"
+        )
+        raise TypeError(msg)
+    return cast("GeoProjAttrs", data)
 
 
-def _convention_data(metadata: Mapping[str, object]) -> GeoProjAttrs:
-    """Pull this document's proj data out and run the attribute-level rules."""
-    attributes = convention_attributes(metadata, CMO)
-    _, data = extract(attributes)
-    return validate(data)
+def _validate_context(context: NodeContext) -> None:
+    """Validate proj against an already prepared node."""
+    validate(node_convention_data(context, CMO, CONVENTION_KEYS))
 
 
 def validate_group_metadata(
     metadata: GroupMetadataInput,
 ) -> GroupMetadata[GeoProjConventionAttrs]:
     """Validate a v3 group metadata document against proj (r2)."""
-    node_type_of(metadata, expected="group")
-    _convention_data(metadata)
-    return cast("GroupMetadata[GeoProjConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="group")
+    _validate_context(context)
+    return cast("GroupMetadata[GeoProjConventionAttrs]", context.metadata)
 
 
 def validate_array_metadata(
@@ -177,14 +186,14 @@ def validate_array_metadata(
     Proj (r2) places no node-type-specific requirements on either
     node type, so this matches `validate_group_metadata()`.
     """
-    node_type_of(metadata, expected="array")
-    _convention_data(metadata)
-    return cast("ArrayMetadata[GeoProjConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="array")
+    _validate_context(context)
+    return cast("ArrayMetadata[GeoProjConventionAttrs]", context.metadata)
 
 
 def validate_node_metadata(
     metadata: NodeMetadataInput,
-) -> ArrayMetadata[GeoProjConventionAttrs] | GroupMetadata[GeoProjConventionAttrs]:
+) -> Metadata[GeoProjConventionAttrs]:
     """Validate a v3 node metadata document against proj (r2).
 
     Dispatches on the document's `node_type` to

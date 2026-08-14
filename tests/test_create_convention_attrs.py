@@ -12,9 +12,9 @@ from typing import Any
 
 import pytest
 
-import zarr_cm
 from zarr_cm import license as license_
 from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm._core import validate_json_object
 
 # (module, kwargs) pairs covering every convention.
 CASES: list[tuple[Any, dict[str, Any]]] = [
@@ -55,7 +55,10 @@ def test_validates_as_node_metadata() -> None:
     for module, kwargs in CASES:
         attrs = module.create_convention_attrs(**kwargs)
         node: Any = {"zarr_format": 3, "node_type": "group", "attributes": attrs}
-        assert zarr_cm.validate_group_metadata(node) is node
+        expected = {**node, "attributes": validate_json_object(attrs)}
+        validated = module.validate_group_metadata(node)
+        assert validated == expected
+        assert validated is not node
 
 
 def test_revision_can_be_pinned() -> None:

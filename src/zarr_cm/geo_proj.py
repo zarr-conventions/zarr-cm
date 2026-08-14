@@ -1,7 +1,7 @@
-"""Backward-compatibility alias for the renamed ``proj`` convention package.
+"""Backward-compatibility alias for the renamed `proj` convention package.
 
-Upstream renamed ``geo-proj`` to ``proj``. Importing ``zarr_cm.geo_proj``
-continues to work and exposes the latest ``proj`` revision's API.
+Upstream renamed `geo-proj` to `proj`. Importing `zarr_cm.geo_proj`
+continues to work and exposes the latest `proj` revision's API.
 """
 
 from __future__ import annotations

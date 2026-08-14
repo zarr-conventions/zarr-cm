@@ -1,8 +1,8 @@
 """Structural contract for convention modules dispatched by the registry.
 
-Defines :class:`ConventionModule` and statically asserts that every convention
+Defines `ConventionModule` and statically asserts that every convention
 module (and revision submodule) satisfies it. A signature or constant drift in
-any dispatch target fails ``pyright src/`` at the corresponding ``_check_*`` line.
+any dispatch target fails `pyright src/` at the corresponding `_check_*` line.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 class ConventionModule(Protocol):
     """Structural contract every convention module (and revision submodule) satisfies.
 
-    Pins the dispatch surface: the constants ``UUID``/``SCHEMA_URL``/``SPEC_URL``/
+    Pins the dispatch surface: the constants `UUID`/`SCHEMA_URL`/`SPEC_URL`/
     `CMO`/`CONVENTION_KEYS`, the attributes-level operations
     `create`/`create_convention_attrs`/`insert`/`extract`/`validate`, and the
     node-level operations `validate_group_metadata`/`validate_array_metadata`/
@@ -31,9 +31,9 @@ class ConventionModule(Protocol):
     # constants they pin (UUID/SCHEMA_URL/...), so snake_case does not apply.
     # pylint: disable=invalid-name
 
-    # Read-only properties (not plain attributes): a plain ``x: str`` Protocol
+    # Read-only properties (not plain attributes): a plain `x: str` Protocol
     # member is mutable and therefore invariant, which would reject the modules'
-    # ``Final``/``Literal`` constants (e.g. ``UUID: Final = "689b..."``). Declaring
+    # `Final`/`Literal` constants (e.g. `UUID: Final = "689b..."`). Declaring
     # them as read-only properties makes the member covariant so the literal
     # constants satisfy the contract.
     @property
@@ -48,7 +48,7 @@ class ConventionModule(Protocol):
     def CONVENTION_KEYS(self) -> set[str]: ...
 
     # Likewise read-only: the modules expose these as plain functions, which are
-    # only assignable to an invariant ``object`` member via a covariant property.
+    # only assignable to an invariant `object` member via a covariant property.
     @property
     def create(self) -> object: ...
     @property

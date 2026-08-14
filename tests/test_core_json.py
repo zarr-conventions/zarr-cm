@@ -1,7 +1,7 @@
 """Error-path tests for the JSON-shape validators in :mod:`zarr_cm._core`.
 
-These functions narrow arbitrary ``object`` inputs to the package's JSON types
-and raise ``TypeError`` on anything that is not JSON-shaped; the happy paths are
+These functions narrow arbitrary `object` inputs to the package's JSON types
+and raise `TypeError` on anything that is not JSON-shaped; the happy paths are
 exercised throughout the convention tests, so here we pin the rejection paths.
 """
 

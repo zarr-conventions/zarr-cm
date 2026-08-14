@@ -1,6 +1,6 @@
 """Example: the uom (units of measurement) convention.
 
-Run: ``python examples/uom.py``. Demonstrates create / read-unknown / migrate.
+Run: `python examples/uom.py`. Demonstrates create / read-unknown / migrate.
 Uom has a single revision today (identity migrate scaffold).
 """
 
@@ -13,14 +13,14 @@ from zarr_cm import uom
 
 def workflow_create() -> dict[str, Any]:
     """1. Create new uom data."""
-    attrs = uom.insert({}, uom.create(ucum={"unit": "m"}, description="metres"))
+    attrs = uom.create_convention_attrs(ucum={"unit": "m"}, description="metres")
     print(f"[create] wrote uom data; revision = {uom.detect(attrs)}")
     return attrs
 
 
 def workflow_read_unknown() -> None:
     """2. Read uom data, branching on the detected revision."""
-    doc = uom.insert({}, uom.create(ucum={"unit": "s"}))
+    doc = uom.create_convention_attrs(ucum={"unit": "s"})
     rev = uom.detect(doc)
     print(f"[read] detected revision {rev!r}")
     if rev is None:
@@ -34,10 +34,10 @@ def workflow_read_unknown() -> None:
 
 def workflow_migrate() -> None:
     """3. Identity migration scaffold (one revision today)."""
-    doc = uom.insert({}, uom.create(ucum={"unit": "m"}))
+    doc = uom.create_convention_attrs(ucum={"unit": "m"})
     rev = uom.detect(doc)
     _, old = uom.extract(doc)
-    migrated = uom.insert({}, uom.create(ucum=old["ucum"]))
+    migrated = uom.create_convention_attrs(ucum=old["ucum"])
     print(f"[migrate] {rev} -> {uom.detect(migrated)} (identity; single revision)")
 
 

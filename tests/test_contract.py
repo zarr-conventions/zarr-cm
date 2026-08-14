@@ -10,8 +10,8 @@ def _dispatch_targets() -> list[tuple[str, object]]:
     convention module, plus every revision submodule of a revisioned convention.
 
     Revisioned conventions expose their per-revision submodules as public
-    ``r2``/``r3``/... namespaces (the underlying modules that carry the full
-    convention surface); ``_REVISIONS`` holds thin dispatch wrappers, not the
+    `r2`/`r3`/... namespaces (the underlying modules that carry the full
+    convention surface); `_REVISIONS` holds thin dispatch wrappers, not the
     modules, so we discover the public revision namespaces here instead."""
     targets: list[tuple[str, object]] = []
     for name, mod in (

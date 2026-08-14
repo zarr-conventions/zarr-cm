@@ -1,19 +1,12 @@
 """multiscales convention: https://github.com/zarr-conventions/multiscales
 
 Exposes revisions of the multiscales convention. The package-level functions
-dispatch by a keyword-only ``revision`` argument and default to the latest
+dispatch by a keyword-only `revision` argument and default to the latest
 revision for writes / auto-detect for reads.
 
-.. note::
-    There is no ``r1``. An earlier draft existed (upstream commit 1c20751), but
-    its schema ``const``-requires ``schema_url == refs/tags/v1/schema.json``,
-    and that tag was never published upstream (the multiscales repo's only tag
-    is ``v0.1``, which is what ``r2`` uses). So there is no ``schema_url`` value
-    that both resolves and satisfies the schema's ``const`` -- the revision is
-    unshippable, so it was dropped. The surviving revision keeps its ``r2``
-    label (labels are package-local and never appear in emitted documents, so
-    renumbering would only churn the public type names). See the project README
-    for details.
+There is no `r1`. Its schema required an unpublished schema URL, so there was
+no value that both resolved and satisfied the schema. The surviving revision
+keeps its `r2` label because revision labels are local to this package.
 """
 
 from __future__ import annotations
@@ -27,11 +20,16 @@ from zarr_cm._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    detect_revision,
-    node_attributes,
-    node_type_of,
     resolve_revision_label,
+)
+from zarr_cm._node import (
+    NodeContext,
+    node_type_of,
+    prepare_node,
+    resolve_attributes_revision,
+    resolve_context_revision,
 )
 
 from . import _r2
@@ -42,7 +40,7 @@ if TYPE_CHECKING:
 
 # Re-export the latest revision's public types/constants at package level.
 # Listed in __all__ so they count as explicit public re-exports without the
-# ``X as X`` idiom.
+# `X as X` idiom.
 from ._r2 import (
     CMO,
     CONVENTION_KEYS,
@@ -95,9 +93,7 @@ class _RevisionModule(NamedTuple):
     validate: typing.Callable[..., typing.Mapping[str, JSONValue]]
     extract: typing.Callable[..., tuple[JSONDict, typing.Mapping[str, JSONValue]]]
     create_convention_attrs: typing.Callable[..., typing.Mapping[str, JSONValue]]
-    validate_group_metadata: typing.Callable[..., object]
-    validate_array_metadata: typing.Callable[..., object]
-    validate_node_metadata: typing.Callable[..., object]
+    validate_context: typing.Callable[[NodeContext], object]
 
 
 _REVISIONS: Final[dict[str, _RevisionModule]] = {
@@ -108,9 +104,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r2.validate,
         _r2.extract,
         _r2.create_convention_attrs,
-        _r2.validate_group_metadata,
-        _r2.validate_array_metadata,
-        _r2.validate_node_metadata,
+        _r2._validate_context,  # pylint: disable=protected-access
     ),
 }
 LATEST: Final = "r2"
@@ -124,16 +118,21 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
 
 
 def _resolve_read_revision(attrs: Mapping[str, JSONValue], revision: str | None) -> str:
-    if revision is not None:
-        return revision
-    return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
+    return resolve_attributes_revision(
+        attrs,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="multiscales",
+        requested=revision,
+    )
 
 
 def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the multiscales convention.
 
-    Returns the label (``"r2"``), or ``None`` if the convention is
-    present but at an unrecognized revision. Raises ``ValueError`` if the multiscales
+    Returns the label (`"r2"`), or `None` if the convention is
+    present but at an unrecognized revision. Raises `ValueError` if the multiscales
     convention is absent from *attrs*.
     """
     return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "multiscales")
@@ -224,13 +223,17 @@ def validate_group_metadata(
     unless *revision* pins one. The document comes back with its `attributes`
     narrowed to the matched revision's convention type.
     """
-    attrs = node_attributes(metadata)
-    return typing.cast(
-        "GroupMetadata[MultiscalesConventionAttrsR2]",
-        _revision(_resolve_read_revision(attrs, revision)).validate_group_metadata(
-            metadata
-        ),
+    context = prepare_node(metadata, expected_node_type="group")
+    selected = resolve_context_revision(
+        context,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="multiscales",
+        requested=revision,
     )
+    _revision(selected).validate_context(context)
+    return typing.cast("GroupMetadata[MultiscalesConventionAttrsR2]", context.metadata)
 
 
 def validate_array_metadata(
@@ -240,15 +243,23 @@ def validate_array_metadata(
 
     Every revision restricts `node_type` to `"group"`, so this always raises.
     """
-    attrs = node_attributes(metadata)
-    _revision(_resolve_read_revision(attrs, revision)).validate_array_metadata(metadata)
+    context = prepare_node(metadata, expected_node_type="array")
+    selected = resolve_context_revision(
+        context,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="multiscales",
+        requested=revision,
+    )
+    _revision(selected).validate_context(context)
     msg = "unreachable: every multiscales revision rejects array nodes"
     raise AssertionError(msg)
 
 
 def validate_node_metadata(
     metadata: NodeMetadataInput, *, revision: str | None = None
-) -> GroupMetadata[MultiscalesConventionAttrsR2]:
+) -> Metadata[MultiscalesConventionAttrsR2]:
     """Validate a full v3 node metadata document against multiscales.
 
     Dispatches on the document's `node_type` to

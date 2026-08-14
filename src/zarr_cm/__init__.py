@@ -26,11 +26,8 @@ from ._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    NodeMetadataInputT,
-    NodeType,
-    node_attributes,
-    node_type_of,
     validate_convention_metadata_object,
     validate_convention_metadata_objects,
     validate_json_object,
@@ -75,9 +72,6 @@ class _ConventionModule(NamedTuple):
     insert: typing.Callable[..., JSONDict]
     extract: typing.Callable[..., tuple[JSONDict, object]]
     detect: typing.Callable[[Mapping[str, JSONValue]], str | None]
-    validate_group_metadata: typing.Callable[..., object]
-    validate_array_metadata: typing.Callable[..., object]
-    validate_node_metadata: typing.Callable[..., object]
     resolve_read_revision: (
         typing.Callable[[Mapping[str, JSONValue], str | None], str] | None
     ) = None
@@ -91,9 +85,6 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
         proj.insert,
         proj.extract,
         proj.detect,
-        proj.validate_group_metadata,
-        proj.validate_array_metadata,
-        proj.validate_node_metadata,
         proj._resolve_read_revision,  # pylint: disable=protected-access
     ),
     "spatial": _ConventionModule(
@@ -103,9 +94,6 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
         spatial.insert,
         spatial.extract,
         spatial.detect,
-        spatial.validate_group_metadata,
-        spatial.validate_array_metadata,
-        spatial.validate_node_metadata,
         spatial._resolve_read_revision,  # pylint: disable=protected-access
     ),
     "multiscales": _ConventionModule(
@@ -115,9 +103,6 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
         multiscales.insert,
         multiscales.extract,
         multiscales.detect,
-        multiscales.validate_group_metadata,
-        multiscales.validate_array_metadata,
-        multiscales.validate_node_metadata,
         multiscales._resolve_read_revision,  # pylint: disable=protected-access
     ),
     "license": _ConventionModule(
@@ -127,9 +112,6 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
         license_.insert,
         license_.extract,
         license_.detect,
-        license_.validate_group_metadata,
-        license_.validate_array_metadata,
-        license_.validate_node_metadata,
     ),
     "uom": _ConventionModule(
         uom.UUID,
@@ -138,9 +120,6 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
         uom.insert,
         uom.extract,
         uom.detect,
-        uom.validate_group_metadata,
-        uom.validate_array_metadata,
-        uom.validate_node_metadata,
     ),
 }
 
@@ -194,10 +173,10 @@ def _rev_kwargs(
     revisions: dict[ConventionName, str] | None,
     name: ConventionName,
 ) -> dict[str, str]:
-    """Return ``{'revision': label}`` if this module supports revisions and a
+    """Return `{'revision': label}` if this module supports revisions and a
     label was requested for *name*, else an empty dict.
 
-    For the WRITE path (``create_many``/``insert_many``) only: there is no
+    For the WRITE path (`create_many`/`insert_many`) only: there is no
     document to detect from, so without an explicit override the module's own
     default (LATEST) applies.
     """
@@ -214,11 +193,10 @@ def _read_rev_kwargs(
 ) -> dict[str, str]:
     """Resolve the revision for a READ over *attrs* and return it as kwargs.
 
-    Like :func:`_rev_kwargs`, but when no explicit override is given and the
-    module supports revisions, the revision is detected ONCE from *attrs* and
-    pinned. This must be threaded to *both* ``extract`` and ``validate`` so a
-    document detected as (say) r1 is not re-detected as LATEST after ``extract``
-    has stripped its ``zarr_conventions`` entry.
+    Like `_rev_kwargs`, but when no explicit override is given and the module
+    supports revisions, the revision is detected once from `attrs` and pinned.
+    This must be threaded to both `extract` and `validate` so extraction cannot
+    remove the declaration before validation resolves the revision.
     """
     if mod.resolve_read_revision is None:
         return {}
@@ -241,21 +219,13 @@ def create_many(
 ) -> JSONDict:
     """Create and insert multiple conventions into a single attributes dict.
 
-    Parameters
-    ----------
-    conventions
-        Mapping from convention display name (e.g. ``"geo-proj"``) to
-        already-formed convention data (the ``AttrsT`` value).
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
+    Args:
+        conventions: Convention names mapped to already-formed convention data.
+        revisions: Optional convention names mapped to revision labels.
 
-    Returns
-    -------
-    JSONDict
-        A new attributes dict containing all convention data and a
-        combined ``zarr_conventions`` array.
+    Returns:
+        A new attributes dict containing all convention data and a combined
+        `zarr_conventions` array.
     """
     result: JSONDict = {}
     for name, data in conventions.items():
@@ -274,21 +244,13 @@ def validate_many(
 ) -> Mapping[str, JSONValue]:
     """Validate multiple conventions within an attributes dict.
 
-    Parameters
-    ----------
-    attrs
-        The attributes dict to validate.
-    conventions
-        Convention names to validate.
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
+    Args:
+        attrs: The attributes dict to validate.
+        conventions: Convention names to validate.
+        revisions: Optional convention names mapped to revision labels.
 
-    Returns
-    -------
-    JSONDict
-        The input *attrs* (pass-through on success).
+    Returns:
+        The input `attrs`, unchanged.
     """
     for name in conventions:
         mod = _get_module(name)
@@ -307,23 +269,13 @@ def insert_many(
 ) -> JSONDict:
     """Insert multiple conventions into an attributes dict.
 
-    Parameters
-    ----------
-    attrs
-        The existing attributes dict.
-    conventions
-        Mapping from convention display name to already-formed convention data.
-    overwrite
-        If False (default), raise ``ValueError`` when *attrs* already
-        contains keys present in a convention's data.
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
+    Args:
+        attrs: The existing attributes dict.
+        conventions: Convention names mapped to already-formed convention data.
+        overwrite: Whether convention data may replace existing keys.
+        revisions: Optional convention names mapped to revision labels.
 
-    Returns
-    -------
-    JSONDict
+    Returns:
         A new attributes dict with all convention data merged in.
     """
     result = dict(attrs)
@@ -343,22 +295,14 @@ def extract_many(
 ) -> tuple[JSONDict, dict[ConventionName, JSONDict]]:
     """Extract multiple conventions from an attributes dict.
 
-    Parameters
-    ----------
-    attrs
-        The attributes dict to extract from.
-    conventions
-        Convention names to extract.
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
+    Args:
+        attrs: The attributes dict to extract from.
+        conventions: Convention names to extract.
+        revisions: Optional convention names mapped to revision labels.
 
-    Returns
-    -------
-    tuple[JSONDict, dict[str, JSONDict]]
-        ``(remaining_attrs, extracted)`` where *extracted* maps
-        convention names to their convention data dicts.
+    Returns:
+        `(remaining_attrs, extracted)`, where `extracted` maps convention names
+        to their convention data.
     """
     remaining = dict(attrs)
     extracted: dict[ConventionName, JSONDict] = {}
@@ -378,21 +322,14 @@ def validate_all(
     """Validate all detected conventions within an attributes dict.
 
     Detects which conventions are present by matching UUIDs in
-    ``zarr_conventions``, then validates each one.
+    `zarr_conventions`, then validates each one.
 
-    Parameters
-    ----------
-    attrs
-        The attributes dict to validate.
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
+    Args:
+        attrs: The attributes dict to validate.
+        revisions: Optional convention names mapped to revision labels.
 
-    Returns
-    -------
-    JSONDict
-        The input *attrs* (pass-through on success).
+    Returns:
+        The input `attrs`, unchanged.
     """
     return validate_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
@@ -405,102 +342,17 @@ def extract_all(
     """Extract all detected conventions from an attributes dict.
 
     Detects which conventions are present by matching UUIDs in
-    ``zarr_conventions``, then extracts each one.
-
-    Parameters
-    ----------
-    attrs
-        The attributes dict to extract from.
-    revisions
-        Optional mapping from convention name to revision label. When a
-        convention is listed here and its module supports revisions, that
-        revision is used; otherwise the module's default applies.
-
-    Returns
-    -------
-    tuple[JSONDict, dict[str, JSONDict]]
-        ``(remaining_attrs, extracted)`` where *extracted* maps
-        convention names to their convention data dicts.
-    """
-    return extract_many(attrs, _detect_conventions(attrs), revisions=revisions)
-
-
-def validate_group_metadata(
-    metadata: NodeMetadataInputT,
-    *,
-    revisions: dict[ConventionName, str] | None = None,
-) -> NodeMetadataInputT:
-    """Validate a full v3 group metadata document against every convention it declares.
-
-    The node-level counterpart of `validate_all()`: it sees the whole
-    document, so conventions can enforce the rules that depend on `node_type`
-    -- `multiscales` applies only to groups, and `spatial:dimensions` is
-    required only on arrays.
-
-    Conventions the document does not declare are skipped. Which conventions
-    those are is runtime data, so unlike the per-convention validators this
-    cannot narrow the document's `attributes` type; it returns its input at
-    the type it came in with. Call a convention's own
-    `validate_group_metadata` when you want the narrowed result.
+    `zarr_conventions`, then extracts each one.
 
     Args:
-        metadata: The full metadata document (the contents of a group's `zarr.json`).
-        revisions: Optional mapping from convention name to revision label. When a
-            convention is listed here and its module supports revisions, that
-            revision is used; otherwise the revision is detected from the document.
+        attrs: The attributes dict to extract from.
+        revisions: Optional convention names mapped to revision labels.
 
     Returns:
-        The input `metadata`, unchanged.
+        `(remaining_attrs, extracted)`, where `extracted` maps convention names
+        to their convention data.
     """
-    _validate_node_metadata(metadata, "group", revisions=revisions)
-    return metadata
-
-
-def validate_array_metadata(
-    metadata: NodeMetadataInputT,
-    *,
-    revisions: dict[ConventionName, str] | None = None,
-) -> NodeMetadataInputT:
-    """Validate a full v3 array metadata document against every convention it declares.
-
-    The array counterpart of `validate_group_metadata()`; see there for
-    parameters and semantics.
-    """
-    _validate_node_metadata(metadata, "array", revisions=revisions)
-    return metadata
-
-
-def validate_node_metadata(
-    metadata: NodeMetadataInputT,
-    *,
-    revisions: dict[ConventionName, str] | None = None,
-) -> NodeMetadataInputT:
-    """Validate a full v3 node metadata document against every convention it declares.
-
-    Dispatches on the document's `node_type` to `validate_array_metadata()`
-    or `validate_group_metadata()`.
-    """
-    if node_type_of(metadata) == "array":
-        return validate_array_metadata(metadata, revisions=revisions)
-    return validate_group_metadata(metadata, revisions=revisions)
-
-
-def _validate_node_metadata(
-    metadata: NodeMetadataInput,
-    node_type: NodeType,
-    *,
-    revisions: dict[ConventionName, str] | None,
-) -> None:
-    """Fan a node metadata document out over every convention it declares."""
-    node_type_of(metadata, expected=node_type)
-    attrs = node_attributes(metadata)
-    for name in sorted(_detect_conventions(attrs)):
-        mod = _get_module(name)
-        rk = _read_rev_kwargs(mod, revisions, name, attrs)
-        if node_type == "array":
-            mod.validate_array_metadata(metadata, **rk)
-        else:
-            mod.validate_group_metadata(metadata, **rk)
+    return extract_many(attrs, _detect_conventions(attrs), revisions=revisions)
 
 
 def detect_revisions(
@@ -510,7 +362,7 @@ def detect_revisions(
 
     Detects which conventions are present (by UUID) and returns a mapping from
     each present convention's display name to its claimed revision label, or
-    ``None`` if present at an unrecognized revision. Absent conventions are not
+    `None` if present at an unrecognized revision. Absent conventions are not
     included.
     """
     result: dict[ConventionName, str | None] = {}
@@ -542,6 +394,7 @@ __all__ = [
     "LayoutObjectR2",
     "LicenseAttrs",
     "LicenseConventionAttrs",
+    "Metadata",
     "MultiConventionAttrs",
     "MultiscalesAttrs",
     "MultiscalesAttrsR2",
@@ -565,9 +418,6 @@ __all__ = [
     "extract_many",
     "insert_many",
     "validate_all",
-    "validate_array_metadata",
     "validate_convention_metadata_object",
-    "validate_group_metadata",
     "validate_many",
-    "validate_node_metadata",
 ]

@@ -90,8 +90,9 @@ def test_create_many_all() -> None:
 
 
 def test_create_many_invalid_name() -> None:
+    conventions: Any = {"not-a-convention": {}}
     with pytest.raises(ValueError, match="Unknown convention"):
-        create_many({"not-a-convention": {}})  # type: ignore[dict-item]
+        create_many(conventions)
 
 
 def test_create_many_invalid_data() -> None:

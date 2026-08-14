@@ -15,13 +15,14 @@ from zarr_cm._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    convention_attributes,
     extract_convention,
     insert_convention,
-    node_type_of,
     resolve_revision_label,
+    validate_json_object,
 )
+from zarr_cm._node import NodeContext, node_convention_data, node_type_of, prepare_node
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -68,9 +69,9 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the uom convention.
 
-    Uom has a single revision (``"v1"``); returns it when present with the
-    known schema_url, ``None`` if present with an unrecognized schema_url, and
-    raises ``ValueError`` if the convention is absent.
+    Uom has a single revision (`"v1"`); returns it when present with the
+    known schema_url, `None` if present with an unrecognized schema_url, and
+    raises `ValueError` if the convention is absent.
     """
     return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "uom")
 
@@ -80,7 +81,7 @@ def create(
     ucum: UCUM,
     description: str | None = None,
 ) -> UomAttrs:
-    """Create a ``UomAttrs`` dict from keyword arguments."""
+    """Create a `UomAttrs` dict from keyword arguments."""
     result = UomAttrs(ucum=ucum)
     if description is not None:
         result["description"] = description
@@ -132,34 +133,58 @@ def extract(
     if "uom" not in convention_data:
         msg = "Extracted convention data does not contain 'uom' key"
         raise KeyError(msg)
-    return remaining, UomAttrs(**convention_data["uom"])  # type: ignore[typeddict-item]
+    value = convention_data["uom"]
+    if not isinstance(value, dict):
+        msg = f"'uom' must be a JSON object, got {type(value).__name__}"
+        raise TypeError(msg)
+    return remaining, cast("UomAttrs", value)
 
 
 def validate(data: Mapping[str, JSONValue]) -> UomAttrs:
     """Validate uom convention data.
 
-    ``ucum`` must be present.
+    `ucum` must be present.
     """
     if "ucum" not in data:
         msg = "'ucum' is required"
         raise ValueError(msg)
-    return data  # type: ignore[return-value]
+    ucum_value = data["ucum"]
+    if not isinstance(ucum_value, dict):
+        msg = f"'ucum' must be a JSON object, got {type(ucum_value).__name__}"
+        raise TypeError(msg)
+    ucum = validate_json_object(ucum_value)
+    for key in ("unit", "version"):
+        if key in ucum and not isinstance(ucum[key], str):
+            msg = f"'ucum.{key}' must be a string, got {type(ucum[key]).__name__}"
+            raise TypeError(msg)
+    if "description" in data and not isinstance(data["description"], str):
+        msg = (
+            f"'description' must be a string, got {type(data['description']).__name__}"
+        )
+        raise TypeError(msg)
+    return cast("UomAttrs", data)
 
 
-def _convention_data(metadata: Mapping[str, object]) -> UomAttrs:
-    """Pull this document's uom data out and run the attribute-level rules."""
-    attributes = convention_attributes(metadata, CMO)
-    _, data = extract(attributes)
-    return validate(data)
+def _validate_context(context: NodeContext) -> None:
+    """Validate uom against an already prepared node."""
+    data = node_convention_data(context, CMO, CONVENTION_KEYS)
+    if "uom" not in data:
+        msg = "'uom' is required"
+        raise ValueError(msg)
+    value = data["uom"]
+    if not isinstance(value, dict):
+        msg = f"'uom' must be a JSON object, got {type(value).__name__}"
+        raise TypeError(msg)
+    validate(validate_json_object(value))
 
 
 def validate_group_metadata(
     metadata: GroupMetadataInput,
 ) -> GroupMetadata[UomConventionAttrs]:
     """Validate a v3 group metadata document against the uom convention."""
-    node_type_of(metadata, expected="group")
-    _convention_data(metadata)
-    return cast("GroupMetadata[UomConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="group")
+    _validate_context(context)
+    return cast("GroupMetadata[UomConventionAttrs]", context.metadata)
 
 
 def validate_array_metadata(
@@ -170,14 +195,14 @@ def validate_array_metadata(
     The uom convention places no node-type-specific requirements on either
     node type, so this matches `validate_group_metadata()`.
     """
-    node_type_of(metadata, expected="array")
-    _convention_data(metadata)
-    return cast("ArrayMetadata[UomConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="array")
+    _validate_context(context)
+    return cast("ArrayMetadata[UomConventionAttrs]", context.metadata)
 
 
 def validate_node_metadata(
     metadata: NodeMetadataInput,
-) -> ArrayMetadata[UomConventionAttrs] | GroupMetadata[UomConventionAttrs]:
+) -> Metadata[UomConventionAttrs]:
     """Validate a v3 node metadata document against the uom convention.
 
     Dispatches on the document's `node_type` to

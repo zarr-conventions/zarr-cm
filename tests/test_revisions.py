@@ -23,12 +23,8 @@ def test_detect_resolves_r3_from_r3_url() -> None:
     assert spatial._resolve_read_revision(attrs, None) == "r3"
 
 
-def test_unknown_url_falls_back_to_latest() -> None:
-    """A schema_url that matches no known revision falls back to LATEST.
-
-    The fabricated commit-pinned URL will never match any entry in
-    _SCHEMA_URL_BY_REVISION, so detection yields LATEST.
-    """
+def test_unknown_url_is_rejected() -> None:
+    """An explicit unknown schema URL must not be validated as latest."""
     fabricated_url = (
         "https://raw.githubusercontent.com/zarr-conventions/spatial"
         "/0000000000000000000000000000000000000000/schema.json"
@@ -42,9 +38,9 @@ def test_unknown_url_falls_back_to_latest() -> None:
             }
         ],
     }
-    resolved = spatial._resolve_read_revision(attrs, None)
-    assert resolved == spatial.LATEST
-    # Confirm a genuine r2 URL resolves to r2, distinct from the fallback path.
+    with pytest.raises(ValueError, match="unsupported schema_url"):
+        spatial._resolve_read_revision(attrs, None)
+    # Confirm a genuine r2 URL still resolves normally.
     r2_attrs = spatial.insert(
         {}, spatial.create(dimensions=["y", "x"], revision="r2"), revision="r2"
     )
@@ -105,8 +101,8 @@ def test_proj_resolves_r3_from_r3_url() -> None:
     assert proj._resolve_read_revision(attrs, None) == "r3"
 
 
-def test_proj_unknown_url_falls_back_to_latest() -> None:
-    """A schema_url that matches no known proj revision falls back to LATEST (r3)."""
+def test_proj_unknown_url_is_rejected() -> None:
+    """An explicit unknown proj schema URL must not select r3."""
     fabricated_url = (
         "https://raw.githubusercontent.com/zarr-conventions/proj"
         "/0000000000000000000000000000000000000000/schema.json"
@@ -120,9 +116,9 @@ def test_proj_unknown_url_falls_back_to_latest() -> None:
             }
         ],
     }
-    resolved = proj._resolve_read_revision(attrs, None)
-    assert resolved == proj.LATEST  # == "r3"
-    # Confirm a genuine r2 URL resolves to r2, distinct from the fallback path.
+    with pytest.raises(ValueError, match="unsupported schema_url"):
+        proj._resolve_read_revision(attrs, None)
+    # Confirm a genuine r2 URL still resolves normally.
     r2_attrs = proj.insert(
         {}, proj.create(code="EPSG:4326", revision="r2"), revision="r2"
     )
@@ -137,9 +133,9 @@ def test_proj_extract_autodetects_r2_url() -> None:
 
 
 def test_proj_validate_observably_differs_by_revision() -> None:
-    """r2 requires code to match ``^[A-Z]+:[0-9]+$``; r3 relaxes to ``^[^:]+:[^:]+$``.
+    """r2 requires code to match `^[A-Z]+:[0-9]+$`; r3 relaxes to `^[^:]+:[^:]+$`.
 
-    A code like ``urn:ogc`` matches r3's relaxed pattern but not r2's strict one,
+    A code like `urn:ogc` matches r3's relaxed pattern but not r2's strict one,
     so the revision argument observably controls dispatch.
     """
     data = {"proj:code": "urn:ogc"}

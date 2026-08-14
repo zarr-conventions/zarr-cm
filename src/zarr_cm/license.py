@@ -15,13 +15,14 @@ from zarr_cm._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    convention_attributes,
     extract_convention,
     insert_convention,
-    node_type_of,
     resolve_revision_label,
+    validate_json_object,
 )
+from zarr_cm._node import NodeContext, node_convention_data, node_type_of, prepare_node
 
 if TYPE_CHECKING:
     from collections.abc import Mapping
@@ -66,9 +67,9 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {"v1": SCHEMA_URL}
 def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the license convention.
 
-    License has a single revision (``"v1"``); returns it when present with the
-    known schema_url, ``None`` if present with an unrecognized schema_url, and
-    raises ``ValueError`` if the convention is absent.
+    License has a single revision (`"v1"`); returns it when present with the
+    known schema_url, `None` if present with an unrecognized schema_url, and
+    raises `ValueError` if the convention is absent.
     """
     return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "license")
 
@@ -81,7 +82,7 @@ def create(
     file: str | None = None,
     path: str | None = None,
 ) -> LicenseAttrs:
-    """Create a ``LicenseAttrs`` dict from keyword arguments."""
+    """Create a `LicenseAttrs` dict from keyword arguments."""
     result = LicenseAttrs()
     if spdx is not None:
         result["spdx"] = spdx
@@ -144,35 +145,50 @@ def extract(
     if "license" not in convention_data:
         msg = "Extracted convention data does not contain 'license' key"
         raise KeyError(msg)
-    return remaining, LicenseAttrs(**convention_data["license"])  # type: ignore[typeddict-item]
+    value = convention_data["license"]
+    if not isinstance(value, dict):
+        msg = f"'license' must be a JSON object, got {type(value).__name__}"
+        raise TypeError(msg)
+    return remaining, cast("LicenseAttrs", value)
 
 
 def validate(data: Mapping[str, JSONValue]) -> LicenseAttrs:
     """Validate license convention data.
 
-    At least one of ``spdx``, ``url``, ``text``, ``file``, or ``path``
+    At least one of `spdx`, `url`, `text`, `file`, or `path`
     must be present.
     """
-    if not any(k in data for k in ("spdx", "url", "text", "file", "path")):
+    keys = ("spdx", "url", "text", "file", "path")
+    if not any(k in data for k in keys):
         msg = "At least one of 'spdx', 'url', 'text', 'file', or 'path' must be present"
         raise ValueError(msg)
-    return data  # type: ignore[return-value]
+    for key in keys:
+        if key in data and not isinstance(data[key], str):
+            msg = f"'{key}' must be a string, got {type(data[key]).__name__}"
+            raise TypeError(msg)
+    return cast("LicenseAttrs", data)
 
 
-def _convention_data(metadata: Mapping[str, object]) -> LicenseAttrs:
-    """Pull this document's license data out and run the attribute-level rules."""
-    attributes = convention_attributes(metadata, CMO)
-    _, data = extract(attributes)
-    return validate(data)
+def _validate_context(context: NodeContext) -> None:
+    """Validate license against an already prepared node."""
+    data = node_convention_data(context, CMO, CONVENTION_KEYS)
+    if "license" not in data:
+        msg = "'license' is required"
+        raise ValueError(msg)
+    value = data["license"]
+    if not isinstance(value, dict):
+        msg = f"'license' must be a JSON object, got {type(value).__name__}"
+        raise TypeError(msg)
+    validate(validate_json_object(value))
 
 
 def validate_group_metadata(
     metadata: GroupMetadataInput,
 ) -> GroupMetadata[LicenseConventionAttrs]:
     """Validate a v3 group metadata document against the license convention."""
-    node_type_of(metadata, expected="group")
-    _convention_data(metadata)
-    return cast("GroupMetadata[LicenseConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="group")
+    _validate_context(context)
+    return cast("GroupMetadata[LicenseConventionAttrs]", context.metadata)
 
 
 def validate_array_metadata(
@@ -183,14 +199,14 @@ def validate_array_metadata(
     The license convention places no node-type-specific requirements on either
     node type, so this matches `validate_group_metadata()`.
     """
-    node_type_of(metadata, expected="array")
-    _convention_data(metadata)
-    return cast("ArrayMetadata[LicenseConventionAttrs]", metadata)
+    context = prepare_node(metadata, expected_node_type="array")
+    _validate_context(context)
+    return cast("ArrayMetadata[LicenseConventionAttrs]", context.metadata)
 
 
 def validate_node_metadata(
     metadata: NodeMetadataInput,
-) -> ArrayMetadata[LicenseConventionAttrs] | GroupMetadata[LicenseConventionAttrs]:
+) -> Metadata[LicenseConventionAttrs]:
     """Validate a v3 node metadata document against the license convention.
 
     Dispatches on the document's `node_type` to

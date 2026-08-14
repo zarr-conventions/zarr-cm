@@ -1,19 +1,13 @@
 """spatial convention: https://github.com/zarr-conventions/spatial
 
 Exposes revisions of the spatial convention. The package-level functions
-dispatch by a keyword-only ``revision`` argument and default to the latest
+dispatch by a keyword-only `revision` argument and default to the latest
 revision for writes / auto-detect for reads.
 
-.. note::
-    There is no ``r1``. An earlier draft existed, but the only ``schema_url``
-    it could carry -- upstream's ``refs/tags/v1/schema.json`` -- was never
-    actually published (the spatial repo's first and only tag is ``v0.1``), so
-    that URL has always 404'd and is non-conformant with the spec's requirement
-    that ``schema_url`` resolve to the convention's schema. Rather than ship a
-    revision whose self-describing URL is permanently broken, it was dropped.
-    The surviving revisions keep their ``r2``/``r3`` labels (labels are
-    package-local and never appear in emitted documents, so renumbering would
-    only churn the public type names). See the project README for details.
+There is no `r1`. An earlier draft existed, but the only `schema_url` it could
+carry -- upstream's `refs/tags/v1/schema.json` -- was never published. The
+surviving revisions keep their `r2`/`r3` labels because those labels are local
+to this package and never appear in emitted documents.
 """
 
 from __future__ import annotations
@@ -28,11 +22,16 @@ from zarr_cm._core import (
     GroupMetadataInput,
     JSONDict,
     JSONValue,
+    Metadata,
     NodeMetadataInput,
-    detect_revision,
-    node_attributes,
-    node_type_of,
     resolve_revision_label,
+)
+from zarr_cm._node import (
+    NodeContext,
+    node_type_of,
+    prepare_node,
+    resolve_attributes_revision,
+    resolve_context_revision,
 )
 
 from . import _r2, _r3
@@ -43,7 +42,7 @@ if TYPE_CHECKING:
 
 # Re-export the latest revision's public types/constants at package level.
 # Listed in __all__ so they count as explicit public re-exports without the
-# ``X as X`` idiom.
+# `X as X` idiom.
 from ._r3 import (
     CMO,
     CONVENTION_KEYS,
@@ -93,9 +92,7 @@ class _RevisionModule(NamedTuple):
     validate: typing.Callable[..., typing.Mapping[str, JSONValue]]
     extract: typing.Callable[..., tuple[JSONDict, typing.Mapping[str, JSONValue]]]
     create_convention_attrs: typing.Callable[..., typing.Mapping[str, JSONValue]]
-    validate_group_metadata: typing.Callable[..., object]
-    validate_array_metadata: typing.Callable[..., object]
-    validate_node_metadata: typing.Callable[..., object]
+    validate_context: typing.Callable[[NodeContext], object]
 
 
 _REVISIONS: Final[dict[str, _RevisionModule]] = {
@@ -106,9 +103,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r2.validate,
         _r2.extract,
         _r2.create_convention_attrs,
-        _r2.validate_group_metadata,
-        _r2.validate_array_metadata,
-        _r2.validate_node_metadata,
+        _r2._validate_context,  # pylint: disable=protected-access
     ),
     "r3": _RevisionModule(
         _r3.SCHEMA_URL,
@@ -117,9 +112,7 @@ _REVISIONS: Final[dict[str, _RevisionModule]] = {
         _r3.validate,
         _r3.extract,
         _r3.create_convention_attrs,
-        _r3.validate_group_metadata,
-        _r3.validate_array_metadata,
-        _r3.validate_node_metadata,
+        _r3._validate_context,  # pylint: disable=protected-access
     ),
 }
 LATEST: Final = "r3"
@@ -134,16 +127,21 @@ _SCHEMA_URL_BY_REVISION: Final[dict[str, str]] = {
 
 
 def _resolve_read_revision(attrs: Mapping[str, JSONValue], revision: str | None) -> str:
-    if revision is not None:
-        return revision
-    return detect_revision(attrs, UUID, _SCHEMA_URL_BY_REVISION) or LATEST
+    return resolve_attributes_revision(
+        attrs,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="spatial:",
+        requested=revision,
+    )
 
 
 def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     """Return the revision label this document claims for the spatial convention.
 
-    Returns the label (e.g. ``"r2"``/``"r3"``), or ``None`` if the convention is
-    present but at an unrecognized revision. Raises ``ValueError`` if the spatial
+    Returns the label (e.g. `"r2"`/`"r3"`), or `None` if the convention is
+    present but at an unrecognized revision. Raises `ValueError` if the spatial
     convention is absent from *attrs*.
     """
     return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "spatial")
@@ -338,9 +336,19 @@ def validate_group_metadata(
     unless *revision* pins one. The document comes back with its `attributes`
     narrowed to the matched revision's convention type.
     """
-    attrs = node_attributes(metadata)
-    return _revision(_resolve_read_revision(attrs, revision)).validate_group_metadata(
-        metadata
+    context = prepare_node(metadata, expected_node_type="group")
+    selected = resolve_context_revision(
+        context,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="spatial:",
+        requested=revision,
+    )
+    _revision(selected).validate_context(context)
+    return typing.cast(
+        "GroupMetadata[SpatialConventionAttrsR2] | GroupMetadata[SpatialConventionAttrsR3]",
+        context.metadata,
     )
 
 
@@ -373,20 +381,25 @@ def validate_array_metadata(
     unless *revision* pins one. The document comes back with its `attributes`
     narrowed to the matched revision's convention type.
     """
-    attrs = node_attributes(metadata)
-    return _revision(_resolve_read_revision(attrs, revision)).validate_array_metadata(
-        metadata
+    context = prepare_node(metadata, expected_node_type="array")
+    selected = resolve_context_revision(
+        context,
+        uuid=UUID,
+        schema_url_by_revision=_SCHEMA_URL_BY_REVISION,
+        latest=LATEST,
+        convention_name="spatial:",
+        requested=revision,
+    )
+    _revision(selected).validate_context(context)
+    return typing.cast(
+        "ArrayMetadata[SpatialConventionAttrsR2] | ArrayMetadata[SpatialConventionAttrsR3]",
+        context.metadata,
     )
 
 
 def validate_node_metadata(
     metadata: NodeMetadataInput, *, revision: str | None = None
-) -> (
-    ArrayMetadata[SpatialConventionAttrsR2]
-    | ArrayMetadata[SpatialConventionAttrsR3]
-    | GroupMetadata[SpatialConventionAttrsR2]
-    | GroupMetadata[SpatialConventionAttrsR3]
-):
+) -> Metadata[SpatialConventionAttrsR2] | Metadata[SpatialConventionAttrsR3]:
     """Validate a full v3 node metadata document against spatial.
 
     Dispatches on the document's `node_type` to

@@ -1,6 +1,6 @@
 """Example: the license convention.
 
-Run: ``python examples/license.py``. Demonstrates create / read-unknown /
+Run: `python examples/license.py`. Demonstrates create / read-unknown /
 migrate. License has a single revision today (identity migrate scaffold).
 """
 
@@ -13,14 +13,14 @@ from zarr_cm import license as license_
 
 def workflow_create() -> dict[str, Any]:
     """1. Create new license data."""
-    attrs = license_.insert({}, license_.create(spdx="MIT"))
+    attrs = license_.create_convention_attrs(spdx="MIT")
     print(f"[create] wrote license data; revision = {license_.detect(attrs)}")
     return attrs
 
 
 def workflow_read_unknown() -> None:
     """2. Read license data, branching on the detected revision."""
-    doc = license_.insert({}, license_.create(spdx="Apache-2.0"))
+    doc = license_.create_convention_attrs(spdx="Apache-2.0")
     rev = license_.detect(doc)
     print(f"[read] detected revision {rev!r}")
     if rev is None:
@@ -34,10 +34,10 @@ def workflow_read_unknown() -> None:
 
 def workflow_migrate() -> None:
     """3. Identity migration scaffold (one revision today)."""
-    doc = license_.insert({}, license_.create(spdx="MIT"))
+    doc = license_.create_convention_attrs(spdx="MIT")
     rev = license_.detect(doc)
     _, old = license_.extract(doc)
-    migrated = license_.insert({}, license_.create(spdx=old["spdx"]))
+    migrated = license_.create_convention_attrs(spdx=old["spdx"])
     print(f"[migrate] {rev} -> {license_.detect(migrated)} (identity; single revision)")
 
 

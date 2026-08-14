@@ -19,25 +19,28 @@ from typing_extensions import ReadOnly, TypeAliasType, TypedDict, TypeVar
 # it from here. The properties this package relies on hold upstream by
 # construction:
 #
-# * The array arm is the covariant ``Sequence`` (not the invariant
-#   ``list``/``tuple``), so concrete JSON-shaped values -- and the convention
-#   ``TypedDict``s, whose fields carry narrower types like ``Sequence[str]`` --
-#   are assignable to it. A JSON array is still a ``list`` at runtime; the
-#   ``Sequence`` arm just declines to require a particular container at the
+# * The array arm is the covariant `Sequence` (not the invariant
+#   `list`/`tuple`), so concrete JSON-shaped values -- and the convention
+#   `TypedDict`s, whose fields carry narrower types like `Sequence[str]` --
+#   are assignable to it. A JSON array is still a `list` at runtime; the
+#   `Sequence` arm just declines to require a particular container at the
 #   type level.
-# * It is a real recursive ``TypeAliasType``, which is what lets a downstream
-#   pydantic model embed the convention ``TypedDict``s (which use it as
-#   ``extra_items``) without ``RecursionError`` in ``model_rebuild()``. See
+# * It is a real recursive `TypeAliasType`, which is what lets a downstream
+#   pydantic model embed the convention `TypedDict`s (which use it as
+#   `extra_items`) without `RecursionError` in `model_rebuild()`. See
 #   https://github.com/zarr-conventions/zarr-cm/issues/18.
 #
 # This import is the reason zarr-metadata is a runtime dependency:
-# ``extra_items=JSONValue`` is evaluated at class-creation time.
-from zarr_metadata import JSONValue
+# `extra_items=JSONValue` is evaluated at class-creation time.
+from zarr_metadata import (
+    JSONValue,
+    ZarrV3ArrayMetadataJSON,
+    ZarrV3GroupMetadataJSON,
+    ZarrV3MetadataFieldJSON,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Callable
-
-    from zarr_metadata import ZarrV3ArrayMetadataJSON, ZarrV3GroupMetadataJSON
 
 NodeType = Literal["array", "group"]
 """The two node types a Zarr v3 metadata document can describe."""
@@ -53,74 +56,80 @@ exports no dict alias, so this is the one JSON name this package defines.
 """
 
 
-AttrsT_co = TypeVar("AttrsT_co", covariant=True, default=Mapping[str, JSONValue])
+AttrsT_co = TypeVar("AttrsT_co", covariant=True)
 """Type parameter for a metadata document's `attributes` field.
 
 Covariant, so a document whose attributes satisfy a *narrower* TypedDict is
-assignable wherever a wider one is expected -- `GroupMetadata[BothConventions]`
-flows into a parameter of `GroupMetadata[SpatialConventionAttrs]`. The PEP 696
-default makes the bare `GroupMetadata` / `ArrayMetadata` spell the wide,
-unvalidated form.
+assignable wherever a wider one is expected.
 """
-
-
-class ArrayMetadata(TypedDict, Generic[AttrsT_co], extra_items=JSONValue):
-    """A Zarr v3 array metadata document, generic over its `attributes` type.
-
-    The type parameter states what is known about `attributes`. Bare
-    `ArrayMetadata` is the wide form -- attributes are an arbitrary JSON object
-    -- and the `validate_*_metadata` functions narrow it: validating against
-    spatial returns `ArrayMetadata[SpatialConventionAttrs]`, so the validated
-    document's convention keys are typed rather than `JSONValue`.
-
-    `attributes` is `ReadOnly`, which is what makes the parameter covariant; the
-    other v3 array fields (`shape`, `data_type`, `codecs`, ...) fall under
-    `extra_items` -- this type models the convention-bearing part of the
-    document, not the whole array schema. Use `zarr-metadata`'s
-    `ZarrV3ArrayMetadataJSON` when those fields matter.
-
-    Narrowing is a claim about the moment of validation: the mapping underneath
-    is still mutable, so mutating a narrowed document does not un-narrow it.
-    """
-
-    zarr_format: Literal[3]
-    node_type: Literal["array"]
-    attributes: ReadOnly[AttrsT_co]
 
 
 class GroupMetadata(TypedDict, Generic[AttrsT_co], extra_items=JSONValue):
-    """A Zarr v3 group metadata document, generic over its `attributes` type.
-
-    The group counterpart of `ArrayMetadata`; see there for the semantics.
-    """
+    """Zarr v3 group metadata generic over its `attributes` type."""
 
     zarr_format: Literal[3]
-    node_type: Literal["group"]
+    node_type: ReadOnly[Literal["group"]]
     attributes: ReadOnly[AttrsT_co]
 
 
-ArrayMetadataInput: TypeAlias = "ZarrV3ArrayMetadataJSON | ArrayMetadata"
-"""What an array validator accepts: a raw `zarr-metadata` document or ours.
+class ArrayMetadata(TypedDict, Generic[AttrsT_co], extra_items=JSONValue):
+    """Zarr v3 array metadata generic over its `attributes` type.
 
-The second arm is the wide `ArrayMetadata` (its type parameter defaults to
-`Mapping[str, JSONValue]`), and covariance means every *narrowed*
-`ArrayMetadata[...]` is assignable to it too -- so validators chain:
+    The base fields intentionally mirror
+    `zarr_metadata.ZarrV3ArrayMetadataJSON`, so convention validation preserves
+    useful types such as `shape`, `codecs`, and the array node discriminator.
+    """
+
+    zarr_format: Literal[3]
+    node_type: ReadOnly[Literal["array"]]
+    data_type: ZarrV3MetadataFieldJSON
+    shape: tuple[int, ...]
+    chunk_grid: ZarrV3MetadataFieldJSON
+    chunk_key_encoding: ZarrV3MetadataFieldJSON
+    fill_value: JSONValue
+    codecs: tuple[ZarrV3MetadataFieldJSON, ...]
+    attributes: ReadOnly[AttrsT_co]
+    storage_transformers: NotRequired[tuple[ZarrV3MetadataFieldJSON, ...]]
+    dimension_names: NotRequired[tuple[str | None, ...]]
+
+
+Metadata = TypeAliasType(
+    "Metadata",
+    ArrayMetadata[AttrsT_co] | GroupMetadata[AttrsT_co],
+    type_params=(AttrsT_co,),
+)
+"""Zarr v3 metadata generic over its `attributes` type.
+
+The type parameter states what is known about `attributes`.
+`Metadata[Mapping[str, JSONValue]]` is the wide form, and the
+`validate_*_metadata` functions narrow it. The array and group arms retain their
+node discriminator and all base Zarr fields.
+
+`attributes` is `ReadOnly`, which makes the parameter covariant and lets
+validators chain without discarding an earlier validated document at input.
+
+Validators return a normalized document whose `attributes` tree uses concrete
+JSON containers. They do not mutate the input mapping.
+"""
+
+
+ArrayMetadataInput: TypeAlias = (
+    ZarrV3ArrayMetadataJSON | ArrayMetadata[Mapping[str, JSONValue]]
+)
+"""What an array validator accepts: zarr-metadata's type or `ArrayMetadata`.
+
+The second arm is wide `ArrayMetadata`; covariance means every narrowed array
+document is assignable to it too, so validators chain:
 `proj.validate_array_metadata(spatial.validate_array_metadata(doc))`.
 """
 
-GroupMetadataInput: TypeAlias = "ZarrV3GroupMetadataJSON | GroupMetadata"
+GroupMetadataInput: TypeAlias = (
+    ZarrV3GroupMetadataJSON | GroupMetadata[Mapping[str, JSONValue]]
+)
 """What a group validator accepts; see `ArrayMetadataInput`."""
 
-NodeMetadataInput: TypeAlias = "ArrayMetadataInput | GroupMetadataInput"
+NodeMetadataInput: TypeAlias = ArrayMetadataInput | GroupMetadataInput
 """What a node validator accepts: either node type, raw or narrowed."""
-
-NodeMetadataInputT = TypeVar("NodeMetadataInputT", bound=NodeMetadataInput)
-"""Type variable over `NodeMetadataInput`, for pass-through validators.
-
-The package-level validators fan out over whichever conventions the document
-declares -- a runtime-determined set -- so there is no single convention to
-narrow to; they return their input at the type it came in with.
-"""
 
 
 def _is_mapping(value: object) -> TypeGuard[Mapping[object, object]]:
@@ -134,7 +143,7 @@ def _is_sequence(value: object) -> TypeGuard[Sequence[object]]:
 
 
 class ConventionMetadataObject(TypedDict, extra_items=JSONValue):
-    """A convention metadata object for the ``zarr_conventions`` array."""
+    """A convention metadata object for the `zarr_conventions` array."""
 
     uuid: NotRequired[str]
     schema_url: NotRequired[str]
@@ -144,7 +153,7 @@ class ConventionMetadataObject(TypedDict, extra_items=JSONValue):
 
 
 class ConventionAttrs(TypedDict, extra_items=JSONValue):
-    """Attributes dict with a ``zarr_conventions`` array."""
+    """Attributes dict with a `zarr_conventions` array."""
 
     zarr_conventions: Sequence[ConventionMetadataObject]
 
@@ -178,7 +187,7 @@ def validate_json_object(value: object) -> JSONDict:
 def validate_convention_metadata_objects(
     value: object,
 ) -> list[ConventionMetadataObject]:
-    """Validate a ``zarr_conventions`` value."""
+    """Validate a `zarr_conventions` value."""
     if value is None:
         return []
     if not _is_sequence(value):
@@ -208,92 +217,12 @@ def validate_convention_metadata_object(cmo: JSONDict) -> None:
         raise ValueError(msg)
 
 
-def node_attributes(metadata: Mapping[str, object]) -> JSONDict:
-    """Return the `attributes` object of a Zarr v3 node metadata document.
-
-    `attributes` is optional in the v3 spec; a document without it is treated
-    as carrying none. Raises `TypeError` if it is present but is not a JSON
-    object.
-    """
-    attributes = metadata.get("attributes", {})
-    if not _is_mapping(attributes):
-        # Name the field: the generic "expected a JSON object" from
-        # validate_json_object would leave the caller to work out, from
-        # traceback frames alone, which of a document's many objects was wrong.
-        msg = f"'attributes' must be a JSON object, got {type(attributes).__name__}"
-        raise TypeError(msg)
-    return validate_json_object(attributes)
-
-
-def node_type_of(
-    metadata: Mapping[str, object],
-    *,
-    expected: NodeType | None = None,
-) -> NodeType:
-    """Return the `node_type` of a Zarr v3 node metadata document.
-
-    Args:
-        metadata: The full metadata document (the contents of a node's `zarr.json`).
-        expected: When given, raise `ValueError` unless the document's `node_type`
-            equals it. Callers that already know which node type they want -- e.g.
-            `validate_array_metadata` -- pass it, so that a mismatched document is
-            rejected rather than quietly validated under the other node type's rules.
-    """
-    zarr_format = metadata.get("zarr_format")
-    if zarr_format != 3:
-        msg = f"conventions are defined for zarr_format 3, got {zarr_format!r}"
-        raise ValueError(msg)
-
-    node_type = metadata.get("node_type")
-    if node_type not in NODE_TYPES:
-        msg = f"'node_type' must be one of {sorted(NODE_TYPES)}, got {node_type!r}"
-        raise ValueError(msg)
-
-    if expected is not None and node_type != expected:
-        msg = f"expected a {expected!r} metadata document, got node_type {node_type!r}"
-        raise ValueError(msg)
-
-    return node_type
-
-
 def convention_present(attrs: Mapping[str, JSONValue], uuid: str) -> bool:
     """Report whether *attrs* declares the convention identified by *uuid*."""
     return any(
         cmo.get("uuid") == uuid
         for cmo in validate_convention_metadata_objects(attrs.get("zarr_conventions"))
     )
-
-
-def convention_attributes(
-    metadata: Mapping[str, object],
-    cmo: ConventionMetadataObject,
-) -> JSONDict:
-    """Return the `attributes` of a v3 node document that declares *cmo*'s convention.
-
-    This does the declaration half of a node validator's preamble: `attributes`
-    is a JSON object and the convention is actually named in its
-    `zarr_conventions`. Document shape -- Zarr v3, a known and expected
-    `node_type` -- is the validator's own assertion, made by calling
-    `node_type_of()` with the node type that validator is *for*; it is not this
-    function's business, since which node types a convention tolerates is a
-    convention rule, not a declaration fact.
-
-    A convention identifies itself by its convention metadata object -- the same
-    `CMO` constant it writes into documents -- rather than by loose name/uuid
-    strings at the call site. The declaration check matches on the CMO's
-    `uuid`, and error messages use its spec `name`.
-
-    Args:
-        metadata: The full metadata document (the contents of a node's `zarr.json`).
-        cmo: The calling convention's metadata object (its module's `CMO`).
-    """
-    attributes = node_attributes(metadata)
-    uuid = cmo.get("uuid")
-    if uuid is None or not convention_present(attributes, uuid):
-        name = cmo.get("name") or uuid or "<unnamed>"
-        msg = f"the {name!r} convention is not declared in this document's 'zarr_conventions'"
-        raise ValueError(msg)
-    return attributes
 
 
 def insert_convention(
@@ -306,20 +235,13 @@ def insert_convention(
     """Insert convention metadata into an attributes dict.
 
     Returns a new dict with the convention data merged in and the CMO
-    appended to the ``zarr_conventions`` array.
+    appended to the `zarr_conventions` array.
 
-    Parameters
-    ----------
-    attrs
-        The existing attributes dict.
-    cmo
-        The convention metadata object to append to ``zarr_conventions``.
-    convention_data
-        Convention-specific keys to merge into *attrs*.
-    overwrite
-        If False (default), raise ``ValueError`` when *attrs* already
-        contains keys present in *convention_data*.  If True, the
-        convention data silently overwrites colliding keys.
+    Args:
+        attrs: The existing attributes dict.
+        cmo: The convention metadata object to append to `zarr_conventions`.
+        convention_data: Convention-specific keys to merge into `attrs`.
+        overwrite: Whether convention data may replace existing keys.
     """
     if not overwrite:
         collisions = set(attrs) & (set(convention_data) - {"zarr_conventions"})
@@ -341,8 +263,8 @@ def extract_convention(
 ) -> tuple[JSONDict, JSONDict]:
     """Extract convention metadata from an attributes dict.
 
-    Returns ``(remaining_attrs, convention_data)`` where the matching CMO
-    is removed from ``zarr_conventions`` and the convention-specific keys
+    Returns `(remaining_attrs, convention_data)` where the matching CMO
+    is removed from `zarr_conventions` and the convention-specific keys
     are separated out.
     """
     remaining: JSONDict = {}
@@ -374,9 +296,9 @@ def resolve_revision_label(
 ) -> str | None:
     """Return the revision label a document claims for a convention.
 
-    Returns the label whose ``schema_url`` matches the convention's CMO, or
-    ``None`` if the convention's ``uuid`` is present but its ``schema_url`` is
-    unrecognized (an older/newer/foreign revision). Raises ``ValueError`` if the
+    Returns the label whose `schema_url` matches the convention's CMO, or
+    `None` if the convention's `uuid` is present but its `schema_url` is
+    unrecognized (an older/newer/foreign revision). Raises `ValueError` if the
     convention is absent (no CMO with *uuid*) -- asking which revision is present
     for a convention that is not there is a caller error.
     """
@@ -393,15 +315,16 @@ def detect_revision(
 ) -> str | None:
     """Return the revision label whose pinned schema_url matches the document's CMO.
 
-    Looks for a convention-metadata object in ``attrs['zarr_conventions']``
-    whose ``uuid`` matches *uuid*. If found, returns the revision label whose
-    ``schema_url`` equals that CMO's ``schema_url``. Returns ``None`` if the
+    Looks for a convention-metadata object in `attrs['zarr_conventions']`
+    whose `uuid` matches *uuid*. If found, returns the revision label whose
+    `schema_url` equals that CMO's `schema_url`. Returns `None` if the
     convention is absent, or present but carrying an unrecognized schema_url
-    (e.g. a legacy/dangling URL) -- callers fall back to the latest revision.
+    (e.g. a legacy or future URL). Callers must decide how to handle that
+    uncertainty; validation must not silently select the latest revision.
 
-    Entries in ``zarr_conventions`` are assumed to be CMO dicts (consistent
+    Entries in `zarr_conventions` are assumed to be CMO dicts (consistent
     with the rest of this module). Revisions are assumed to have distinct
-    ``schema_url`` values; if two share one, the inverse mapping is ambiguous.
+    `schema_url` values; if two share one, the inverse mapping is ambiguous.
     """
     by_url = {url: label for label, url in schema_url_by_revision.items()}
     for cmo in validate_convention_metadata_objects(attrs.get("zarr_conventions")):
@@ -410,3 +333,27 @@ def detect_revision(
             if isinstance(schema_url, str):
                 return by_url.get(schema_url)
     return None
+
+
+__all__ = [
+    "ArrayMetadata",
+    "ArrayMetadataInput",
+    "ConventionAttrs",
+    "ConventionMetadataObject",
+    "GroupMetadata",
+    "GroupMetadataInput",
+    "JSONDict",
+    "JSONValue",
+    "Metadata",
+    "NodeMetadataInput",
+    "NodeType",
+    "convention_present",
+    "detect_revision",
+    "extract_convention",
+    "insert_convention",
+    "resolve_revision_label",
+    "validate_convention_metadata_object",
+    "validate_convention_metadata_objects",
+    "validate_json_object",
+    "validate_json_value",
+]
