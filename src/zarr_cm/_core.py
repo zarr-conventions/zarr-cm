@@ -215,7 +215,14 @@ def node_attributes(metadata: Mapping[str, object]) -> JSONDict:
     as carrying none. Raises `TypeError` if it is present but is not a JSON
     object.
     """
-    return validate_json_object(metadata.get("attributes", {}))
+    attributes = metadata.get("attributes", {})
+    if not _is_mapping(attributes):
+        # Name the field: the generic "expected a JSON object" from
+        # validate_json_object would leave the caller to work out, from
+        # traceback frames alone, which of a document's many objects was wrong.
+        msg = f"'attributes' must be a JSON object, got {type(attributes).__name__}"
+        raise TypeError(msg)
+    return validate_json_object(attributes)
 
 
 def node_type_of(

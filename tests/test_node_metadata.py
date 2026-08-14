@@ -121,8 +121,10 @@ def test_non_v3_document_rejected() -> None:
 
 
 def test_non_object_attributes_rejected() -> None:
+    # The message names the field: a document holds many objects, and the
+    # generic "expected a JSON object" would not say which one was wrong.
     node: Any = {"zarr_format": 3, "node_type": "group", "attributes": []}
-    with pytest.raises(TypeError, match="expected a JSON object"):
+    with pytest.raises(TypeError, match="'attributes' must be a JSON object, got list"):
         zarr_cm.validate_node_metadata(node)
 
 
