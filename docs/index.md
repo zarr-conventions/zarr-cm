@@ -41,20 +41,20 @@ Each convention module provides the following operations:
 <!-- blacken-docs:off -->
 <!-- prettier-ignore -->
 ```python
-from zarr_cm import geo_proj
+from zarr_cm import proj
 
 # Create
-data = geo_proj.create(code="EPSG:4326")
+data = proj.create(code="EPSG:4326")
 print(data)
 #> {'proj:code': 'EPSG:4326'}
 
 # Validate
-print(geo_proj.validate({"proj:code": "EPSG:4326"}))
+print(proj.validate({"proj:code": "EPSG:4326"}))
 #> {'proj:code': 'EPSG:4326'}
 
 # Insert
 attrs = {"foo": "bar"}
-result = geo_proj.insert(attrs, data)
+result = proj.insert(attrs, data)
 print(result)
 """
 {
@@ -73,7 +73,7 @@ print(result)
 """
 
 # Extract
-remaining, extracted = geo_proj.extract(result)
+remaining, extracted = proj.extract(result)
 print(remaining)
 #> {'foo': 'bar'}
 print(extracted)
@@ -210,8 +210,10 @@ except ValueError as exc:
 ## Multiple conventions
 
 `create_many`, `insert_many`, `extract_many`, and `validate_many` work with
-several conventions at once, keyed by convention name. `extract_all` and
-`validate_all` are shortcuts that operate on all known conventions.
+several conventions at once, keyed by convention name (`"proj"`, `"spatial"`,
+`"multiscales"`, `"license"`, `"uom"`; the pre-rename spelling `"geo-proj"` is
+still accepted as an alias for `"proj"`). `extract_all` and `validate_all` are
+shortcuts that operate on all known conventions.
 
 <!-- blacken-docs:off -->
 <!-- prettier-ignore -->
@@ -221,7 +223,7 @@ from zarr_cm import create_many, extract_all
 # Create attributes with multiple conventions at once
 attrs = create_many(
     {
-        "geo-proj": {"proj:code": "EPSG:4326"},
+        "proj": {"proj:code": "EPSG:4326"},
         "spatial": {"spatial:dimensions": ["y", "x"]},
         "license": {"spdx": "MIT"},
     }
@@ -234,9 +236,74 @@ remaining, extracted = extract_all(attrs)
 print(remaining)
 #> {}
 print(sorted(extracted.keys()))
-#> ['geo-proj', 'license', 'spatial']
-print(extracted["geo-proj"])
+#> ['license', 'proj', 'spatial']
+print(extracted["proj"])
 #> {'proj:code': 'EPSG:4326'}
+```
+
+<!-- blacken-docs:on -->
+
+### Composing GeoZarr metadata
+
+A typical geospatial group carries `proj:`, `spatial:` and `multiscales`
+together. Build each with its module's `create` (so it is validated), then
+combine them with `create_many`. The `zarr_conventions` array lists exactly the
+conventions present, in the order given:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import create_many, multiscales, proj, spatial
+
+attrs = create_many(
+    {
+        "proj": proj.create(code="EPSG:27704"),
+        "spatial": spatial.create(
+            dimensions=["y", "x"],
+            transform=[10.0, 0.0, 5400000.0, 0.0, -10.0, 2700000.0],
+            transform_type="affine",
+            shape=[10000, 10000],
+        ),
+        "multiscales": multiscales.create(
+            layout=[
+                {"asset": "0"},
+                {"asset": "1", "derived_from": "0", "transform": {"scale": [2.0, 2.0]}},
+            ]
+        ),
+    }
+)
+print([cmo["name"] for cmo in attrs["zarr_conventions"]])
+#> ['proj:', 'spatial:', 'multiscales']
+```
+
+<!-- blacken-docs:on -->
+
+The result is a plain dict, ready for `group.attrs.update(attrs)` or
+`xarray.Dataset.attrs.update(attrs)`.
+
+### Registry helpers
+
+`latest_revisions` reports which revision each revisioned convention writes by
+default; `convention_metadata` returns the `zarr_conventions` entry for a
+convention (optionally at a specific revision) as a fresh copy. Downstream
+packages that need to know what an installed `zarr-cm` will write can pin
+against these instead of reaching into the convention modules:
+
+<!-- blacken-docs:off -->
+<!-- prettier-ignore -->
+```python
+from zarr_cm import convention_metadata, latest_revisions
+
+print(latest_revisions())
+#> {'proj': 'r3', 'spatial': 'r3', 'multiscales': 'r2'}
+
+cmo = convention_metadata("proj")
+print(cmo["name"], cmo["uuid"])
+#> proj: f17cb550-5864-4468-aeb7-f3180cfb622f
+
+# Registry entries are keyed on schema_url, which pins the revision
+print(convention_metadata("proj", revision="r2")["schema_url"] == cmo["schema_url"])
+#> False
 ```
 
 <!-- blacken-docs:on -->

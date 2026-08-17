@@ -144,7 +144,7 @@ def detect(attrs: Mapping[str, JSONValue]) -> str | None:
     present but at an unrecognized revision. Raises `ValueError` if the proj
     convention is absent from *attrs*.
     """
-    return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "geo-proj")
+    return resolve_revision_label(attrs, UUID, _SCHEMA_URL_BY_REVISION, "proj")
 
 
 def _revision(label: str) -> _RevisionModule:

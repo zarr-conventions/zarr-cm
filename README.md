@@ -71,20 +71,20 @@ pip install zarr-cm
 <!-- blacken-docs:off -->
 <!-- prettier-ignore -->
 ```python
-from zarr_cm import geo_proj
+from zarr_cm import proj
 
 # Create convention metadata
-data = geo_proj.create(code="EPSG:4326")
+data = proj.create(code="EPSG:4326")
 print(data)
 #> {'proj:code': 'EPSG:4326'}
 
 # Validate
-print(geo_proj.validate({"proj:code": "EPSG:4326"}))
+print(proj.validate({"proj:code": "EPSG:4326"}))
 #> {'proj:code': 'EPSG:4326'}
 
 # Insert into an attributes dict
 attrs = {"foo": "bar"}
-result = geo_proj.insert(attrs, data)
+result = proj.insert(attrs, data)
 print(result)
 """
 {
@@ -103,7 +103,7 @@ print(result)
 """
 
 # Extract it back out
-remaining, extracted = geo_proj.extract(result)
+remaining, extracted = proj.extract(result)
 print(remaining)
 #> {'foo': 'bar'}
 print(extracted)

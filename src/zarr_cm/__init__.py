@@ -62,11 +62,21 @@ from .spatial import (
 )
 from .uom import UCUM, UomAttrs, UomConventionAttrs
 
-ConventionName = Literal["geo-proj", "spatial", "multiscales", "license", "uom"]
+ConventionName = Literal["proj", "spatial", "multiscales", "license", "uom", "geo-proj"]
+"""Display names accepted by the multi-convention functions.
+
+`"geo-proj"` is the pre-rename spelling of `"proj"`; it is still accepted
+everywhere a name is taken as input, but functions that *report* names
+(`extract_all`, `detect_revisions` ...) always use the canonical `"proj"`.
+"""
+
+CanonicalConventionName = Literal["proj", "spatial", "multiscales", "license", "uom"]
+"""The canonical subset of `ConventionName` (no aliases)."""
 
 
 class _ConventionModule(NamedTuple):
     UUID: str
+    CMO: ConventionMetadataObject
     CONVENTION_KEYS: set[str]
     validate: typing.Callable[..., object]
     insert: typing.Callable[..., JSONDict]
@@ -75,38 +85,50 @@ class _ConventionModule(NamedTuple):
     resolve_read_revision: (
         typing.Callable[[Mapping[str, JSONValue], str | None], str] | None
     ) = None
+    LATEST: str | None = None
+    revision_cmos: Mapping[str, ConventionMetadataObject] | None = None
 
 
-_REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
-    "geo-proj": _ConventionModule(
+_REGISTRY: Final[dict[CanonicalConventionName, _ConventionModule]] = {
+    "proj": _ConventionModule(
         proj.UUID,
+        proj.CMO,
         proj.CONVENTION_KEYS,
         proj.validate,
         proj.insert,
         proj.extract,
         proj.detect,
         proj._resolve_read_revision,  # pylint: disable=protected-access
+        proj.LATEST,
+        {"r2": proj.r2.CMO, "r3": proj.r3.CMO},
     ),
     "spatial": _ConventionModule(
         spatial.UUID,
+        spatial.CMO,
         spatial.CONVENTION_KEYS,
         spatial.validate,
         spatial.insert,
         spatial.extract,
         spatial.detect,
         spatial._resolve_read_revision,  # pylint: disable=protected-access
+        spatial.LATEST,
+        {"r2": spatial.r2.CMO, "r3": spatial.r3.CMO},
     ),
     "multiscales": _ConventionModule(
         multiscales.UUID,
+        multiscales.CMO,
         multiscales.CONVENTION_KEYS,
         multiscales.validate,
         multiscales.insert,
         multiscales.extract,
         multiscales.detect,
         multiscales._resolve_read_revision,  # pylint: disable=protected-access
+        multiscales.LATEST,
+        {"r2": multiscales.r2.CMO},
     ),
     "license": _ConventionModule(
         license_.UUID,
+        license_.CMO,
         license_.CONVENTION_KEYS,
         license_.validate,
         license_.insert,
@@ -115,6 +137,7 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
     ),
     "uom": _ConventionModule(
         uom.UUID,
+        uom.CMO,
         uom.CONVENTION_KEYS,
         uom.validate,
         uom.insert,
@@ -123,7 +146,11 @@ _REGISTRY: Final[dict[ConventionName, _ConventionModule]] = {
     ),
 }
 
+CONVENTION_ALIASES: Final[dict[str, CanonicalConventionName]] = {"geo-proj": "proj"}
+"""Accepted non-canonical spellings, mapped to their canonical name."""
+
 CONVENTION_NAMES: Final = frozenset(_REGISTRY)
+"""The canonical convention names (aliases excluded)."""
 
 ALL_CONVENTION_KEYS: Final = frozenset(
     proj.CONVENTION_KEYS
@@ -137,7 +164,7 @@ MultiConventionAttrs = TypedDict(
     "MultiConventionAttrs",
     {
         "zarr_conventions": NotRequired[Sequence[ConventionMetadataObject]],
-        # geo-proj
+        # proj
         "proj:code": NotRequired[str],
         "proj:wkt2": NotRequired[str],
         "proj:projjson": NotRequired[JSONDict],
@@ -159,13 +186,97 @@ MultiConventionAttrs = TypedDict(
 )
 
 
+def _canonical(name: str) -> CanonicalConventionName:
+    """Resolve *name* (canonical or alias) to its canonical convention name."""
+    resolved = CONVENTION_ALIASES.get(name, name)
+    # Iterating the registry keys (rather than `if resolved in _REGISTRY`) is
+    # what lets every mypy version narrow `str` to the Literal without a cast;
+    # some versions flag the cast as redundant, others require it.
+    for key in _REGISTRY:
+        if key == resolved:
+            return key
+    msg = f"Unknown convention {name!r}. Valid names: {sorted(CONVENTION_NAMES)}"
+    raise ValueError(msg)
+
+
 def _get_module(name: ConventionName) -> _ConventionModule:
     """Look up convention module by display name, raise ValueError if unknown."""
+    return _REGISTRY[_canonical(name)]
+
+
+def latest_revisions() -> dict[CanonicalConventionName, str]:
+    """Map each revisioned convention to the revision label it writes by default.
+
+    Only conventions that ship more than one revision (`proj`, `spatial`,
+    `multiscales`) appear; unrevisioned conventions (`license`, `uom`) are
+    omitted. Downstream packages can pin against this to notice when a
+    `zarr-cm` upgrade changes what gets written.
+
+    Returns
+    -------
+    dict[str, str]
+        e.g. `{"proj": "r3", "spatial": "r3", "multiscales": "r2"}`.
+    """
+    return {
+        name: mod.LATEST for name, mod in _REGISTRY.items() if mod.LATEST is not None
+    }
+
+
+def convention_metadata(
+    name: ConventionName, *, revision: str | None = None
+) -> ConventionMetadataObject:
+    """Return the `zarr_conventions` registry entry for a convention.
+
+    Parameters
+    ----------
+    name
+        Convention display name (`"proj"`, `"spatial"` ...). The `"geo-proj"`
+        alias is accepted.
+    revision
+        Revision label. Defaults to the latest revision for revisioned
+        conventions. Must be `None` for unrevisioned conventions.
+
+    Returns
+    -------
+    ConventionMetadataObject
+        A fresh copy of the convention's metadata object (`uuid`, `schema_url`,
+        `spec_url`, `name`, `description`), safe to mutate.
+
+    Raises
+    ------
+    ValueError
+        If *name* is unknown, *revision* is unknown, or *revision* is given for
+        an unrevisioned convention.
+    """
+    mod = _get_module(name)
+    if revision is None:
+        return ConventionMetadataObject(**mod.CMO)
+    if mod.revision_cmos is None:
+        msg = f"Convention {name!r} has no revisions; got revision={revision!r}"
+        raise ValueError(msg)
     try:
-        return _REGISTRY[name]
+        cmo = mod.revision_cmos[revision]
     except KeyError:
-        msg = f"Unknown convention {name!r}. Valid names: {sorted(CONVENTION_NAMES)}"
+        msg = f"Unknown revision {revision!r} for {name!r}. Valid revisions: {sorted(mod.revision_cmos)}"
         raise ValueError(msg) from None
+    return ConventionMetadataObject(**cmo)
+
+
+def _requested_revision(
+    revisions: dict[ConventionName, str] | None, name: ConventionName
+) -> str | None:
+    """Look up the revision requested for *name*, matching aliases as well.
+
+    Keys in *revisions* that name no known convention are ignored, as before
+    aliases existed.
+    """
+    if not revisions:
+        return None
+    canonical = _canonical(name)
+    for key, label in revisions.items():
+        if CONVENTION_ALIASES.get(key, key) == canonical:
+            return label
+    return None
 
 
 def _rev_kwargs(
@@ -180,8 +291,9 @@ def _rev_kwargs(
     document to detect from, so without an explicit override the module's own
     default (LATEST) applies.
     """
-    if revisions and name in revisions and mod.resolve_read_revision is not None:
-        return {"revision": revisions[name]}
+    label = _requested_revision(revisions, name)
+    if label is not None and mod.resolve_read_revision is not None:
+        return {"revision": label}
     return {}
 
 
@@ -200,12 +312,15 @@ def _read_rev_kwargs(
     """
     if mod.resolve_read_revision is None:
         return {}
-    if revisions and name in revisions:
-        return {"revision": revisions[name]}
+    label = _requested_revision(revisions, name)
+    if label is not None:
+        return {"revision": label}
     return {"revision": mod.resolve_read_revision(attrs, None)}
 
 
-def _detect_conventions(attrs: Mapping[str, JSONValue]) -> frozenset[ConventionName]:
+def _detect_conventions(
+    attrs: Mapping[str, JSONValue],
+) -> frozenset[CanonicalConventionName]:
     """Identify which conventions are present by matching UUIDs in zarr_conventions."""
     conventions = validate_convention_metadata_objects(attrs.get("zarr_conventions"))
     uuids = {cmo.get("uuid") for cmo in conventions}
@@ -357,7 +472,7 @@ def extract_all(
 
 def detect_revisions(
     attrs: Mapping[str, JSONValue],
-) -> dict[ConventionName, str | None]:
+) -> dict[CanonicalConventionName, str | None]:
     """Map each present convention to the revision label it claims.
 
     Detects which conventions are present (by UUID) and returns a mapping from
@@ -365,7 +480,7 @@ def detect_revisions(
     `None` if present at an unrecognized revision. Absent conventions are not
     included.
     """
-    result: dict[ConventionName, str | None] = {}
+    result: dict[CanonicalConventionName, str | None] = {}
     for name in _detect_conventions(attrs):
         result[name] = _get_module(name).detect(attrs)
     return result
@@ -373,10 +488,12 @@ def detect_revisions(
 
 __all__ = [
     "ALL_CONVENTION_KEYS",
+    "CONVENTION_ALIASES",
     "CONVENTION_NAMES",
     "UCUM",
     "ArrayMetadata",
     "ArrayMetadataInput",
+    "CanonicalConventionName",
     "ConventionAttrs",
     "ConventionMetadataObject",
     "ConventionName",
@@ -412,11 +529,13 @@ __all__ = [
     "UomAttrs",
     "UomConventionAttrs",
     "__version__",
+    "convention_metadata",
     "create_many",
     "detect_revisions",
     "extract_all",
     "extract_many",
     "insert_many",
+    "latest_revisions",
     "validate_all",
     "validate_convention_metadata_object",
     "validate_many",

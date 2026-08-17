@@ -7,14 +7,19 @@
     options:
       members:
         - CONVENTION_NAMES
+        - CONVENTION_ALIASES
         - ALL_CONVENTION_KEYS
+        - ConventionName
         - MultiConventionAttrs
+        - latest_revisions
+        - convention_metadata
         - create_many
         - validate_many
         - validate_all
         - insert_many
         - extract_many
         - extract_all
+        - detect_revisions
 
 ## Core
 

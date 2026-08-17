@@ -44,7 +44,7 @@ def test_proj_detect_known_revisions() -> None:
 
 
 def test_proj_detect_absent_raises() -> None:
-    with pytest.raises(ValueError, match="geo-proj"):
+    with pytest.raises(ValueError, match="proj"):
         proj.detect({"foo": "bar"})
 
 
@@ -57,7 +57,7 @@ def test_detect_revisions_aggregate() -> None:
     )
     attrs = multiscales.insert(attrs, multiscales.create(layout=[{"asset": "0"}]))
     result = zarr_cm.detect_revisions(attrs)
-    assert result == {"spatial": "r3", "geo-proj": "r2", "multiscales": "r2"}
+    assert result == {"spatial": "r3", "proj": "r2", "multiscales": "r2"}
 
 
 def test_detect_revisions_empty() -> None:

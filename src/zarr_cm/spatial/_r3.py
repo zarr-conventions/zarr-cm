@@ -90,7 +90,7 @@ CONVENTION_KEYS: Final = {
     "spatial:registration",
 }
 
-# r2: every dimension-bearing key is a fixed 2D length.
+# r3: every dimension-bearing key is a fixed 2D length.
 _VALID_LENGTHS: Final[dict[str, int]] = {
     "spatial:dimensions": 2,
     "spatial:bbox": 4,
@@ -163,14 +163,14 @@ def create_convention_attrs(
 def insert(
     attrs: Mapping[str, JSONValue], data: SpatialAttrs, *, overwrite: bool = False
 ) -> JSONDict:
-    """Insert spatial (r2) convention metadata into an attributes dict."""
+    """Insert spatial (r3) convention metadata into an attributes dict."""
     return insert_convention(attrs, CMO, data, overwrite=overwrite)
 
 
 def extract(
     attrs: Mapping[str, JSONValue],
 ) -> tuple[JSONDict, SpatialAttrs]:
-    """Extract spatial (r2) convention metadata from an attributes dict."""
+    """Extract spatial (r3) convention metadata from an attributes dict."""
     remaining, convention_data = extract_convention(
         attrs,
         CONVENTION_KEYS,

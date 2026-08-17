@@ -23,7 +23,7 @@ from zarr_cm import (
 
 def test_convention_names_constant() -> None:
     assert (
-        frozenset({"geo-proj", "spatial", "multiscales", "license", "uom"})
+        frozenset({"proj", "spatial", "multiscales", "license", "uom"})
         == CONVENTION_NAMES
     )
 
@@ -51,7 +51,7 @@ def test_all_convention_keys_constant() -> None:
 
 
 def test_create_many_single() -> None:
-    result = create_many({"geo-proj": {"proj:code": "EPSG:4326"}})
+    result = create_many({"proj": {"proj:code": "EPSG:4326"}})
     assert result["proj:code"] == "EPSG:4326"
     assert len(as_sequence(result["zarr_conventions"])) == 1
 
@@ -59,7 +59,7 @@ def test_create_many_single() -> None:
 def test_create_many_mixed() -> None:
     result = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         }
     )
@@ -71,7 +71,7 @@ def test_create_many_mixed() -> None:
 def test_create_many_all() -> None:
     result = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "spatial": {"spatial:dimensions": ["y", "x"]},
             "multiscales": {"layout": [{"asset": "0"}]},
             "license": {"spdx": "MIT"},
@@ -98,28 +98,28 @@ def test_create_many_invalid_name() -> None:
 def test_create_many_invalid_data() -> None:
     # geo-proj resolves to the latest proj revision (r3, anyOf): empty data fails.
     with pytest.raises(ValueError, match="At least one"):
-        create_many({"geo-proj": {}})
+        create_many({"proj": {}})
 
 
 def test_validate_many() -> None:
     attrs = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         }
     )
-    result = validate_many(attrs, ["geo-proj", "license"])
+    result = validate_many(attrs, ["proj", "license"])
     assert result is attrs
 
 
 def test_validate_many_subset() -> None:
     attrs = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         }
     )
-    result = validate_many(attrs, ["geo-proj"])
+    result = validate_many(attrs, ["proj"])
     assert result is attrs
 
 
@@ -134,7 +134,7 @@ def test_validate_many_invalid() -> None:
 def test_validate_all() -> None:
     attrs = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
             "uom": {"ucum": {"unit": "kg"}},
         }
@@ -147,7 +147,7 @@ def test_insert_many_empty_attrs() -> None:
     result = insert_many(
         {},
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         },
     )
@@ -158,7 +158,7 @@ def test_insert_many_empty_attrs() -> None:
 def test_insert_many_preserves_attrs() -> None:
     result = insert_many(
         {"foo": "bar"},
-        {"geo-proj": {"proj:code": "EPSG:4326"}},
+        {"proj": {"proj:code": "EPSG:4326"}},
     )
     assert result["foo"] == "bar"
     assert result["proj:code"] == "EPSG:4326"
@@ -167,14 +167,14 @@ def test_insert_many_preserves_attrs() -> None:
 def test_insert_many_collision_raises() -> None:
     attrs = {"proj:code": "EPSG:3857"}
     with pytest.raises(ValueError, match="overwritten"):
-        insert_many(attrs, {"geo-proj": {"proj:code": "EPSG:4326"}})
+        insert_many(attrs, {"proj": {"proj:code": "EPSG:4326"}})
 
 
 def test_insert_many_overwrite() -> None:
     attrs = {"proj:code": "EPSG:3857"}
     result = insert_many(
         attrs,
-        {"geo-proj": {"proj:code": "EPSG:4326"}},
+        {"proj": {"proj:code": "EPSG:4326"}},
         overwrite=True,
     )
     assert result["proj:code"] == "EPSG:4326"
@@ -183,47 +183,47 @@ def test_insert_many_overwrite() -> None:
 def test_extract_many() -> None:
     attrs = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         }
     )
-    remaining, extracted = extract_many(attrs, ["geo-proj", "license"])
+    remaining, extracted = extract_many(attrs, ["proj", "license"])
     assert remaining == {}
-    assert extracted["geo-proj"] == {"proj:code": "EPSG:4326"}
+    assert extracted["proj"] == {"proj:code": "EPSG:4326"}
     assert extracted["license"] == {"spdx": "MIT"}
 
 
 def test_extract_many_subset() -> None:
     attrs = create_many(
         {
-            "geo-proj": {"proj:code": "EPSG:4326"},
+            "proj": {"proj:code": "EPSG:4326"},
             "license": {"spdx": "MIT"},
         }
     )
-    remaining, extracted = extract_many(attrs, ["geo-proj"])
-    assert "geo-proj" in extracted
+    remaining, extracted = extract_many(attrs, ["proj"])
+    assert "proj" in extracted
     assert "license" not in extracted
     # license data stays in remaining
     assert remaining["license"] == {"spdx": "MIT"}
 
 
 def test_extract_many_preserves_remaining() -> None:
-    attrs = create_many({"geo-proj": {"proj:code": "EPSG:4326"}})
+    attrs = create_many({"proj": {"proj:code": "EPSG:4326"}})
     attrs["foo"] = "bar"
-    remaining, extracted = extract_many(attrs, ["geo-proj"])
+    remaining, extracted = extract_many(attrs, ["proj"])
     assert remaining == {"foo": "bar"}
-    assert extracted["geo-proj"] == {"proj:code": "EPSG:4326"}
+    assert extracted["proj"] == {"proj:code": "EPSG:4326"}
 
 
 def test_extract_all() -> None:
     conventions: dict[ConventionName, dict[str, Any]] = {
-        "geo-proj": {"proj:code": "EPSG:4326"},
+        "proj": {"proj:code": "EPSG:4326"},
         "license": {"spdx": "MIT"},
     }
     attrs = create_many(conventions)
     remaining, extracted = extract_all(attrs)
     assert remaining == {}
-    assert extracted["geo-proj"] == {"proj:code": "EPSG:4326"}
+    assert extracted["proj"] == {"proj:code": "EPSG:4326"}
     assert extracted["license"] == {"spdx": "MIT"}
 
 
@@ -236,7 +236,7 @@ def test_convention_name_literal_matches_registry() -> None:
 
 def test_roundtrip() -> None:
     conventions: dict[ConventionName, dict[str, Any]] = {
-        "geo-proj": {"proj:code": "EPSG:4326"},
+        "proj": {"proj:code": "EPSG:4326"},
         "spatial": {"spatial:dimensions": ["y", "x"]},
         "license": {"spdx": "MIT"},
     }
@@ -267,7 +267,7 @@ def test_extract_all_autodetects_mixed_revisions() -> None:
     attrs = proj.insert(attrs, proj.create(code="EPSG:4326"))  # proj latest = r3
     _remaining, extracted = extract_all(attrs)
     assert extracted["spatial"]["spatial:dimensions"] == ["y", "x"]
-    assert extracted["geo-proj"]["proj:code"] == "EPSG:4326"
+    assert extracted["proj"]["proj:code"] == "EPSG:4326"
 
 
 def test_extract_many_revision_override() -> None:
@@ -283,9 +283,9 @@ def test_validate_many_revision_override_changes_outcome() -> None:
     # A doc tagged r3 with a relaxed code passes under r3 but fails under r2, so
     # the revisions= override genuinely selects which revision validate_many uses.
     attrs = proj.insert({}, proj.create(code="urn:ogc", revision="r3"), revision="r3")
-    validate_many(attrs, ["geo-proj"], revisions={"geo-proj": "r3"})  # passes
+    validate_many(attrs, ["proj"], revisions={"proj": "r3"})  # passes
     with pytest.raises(ValueError, match="proj:code"):
-        validate_many(attrs, ["geo-proj"], revisions={"geo-proj": "r2"})
+        validate_many(attrs, ["proj"], revisions={"proj": "r2"})
 
 
 def test_validate_all_autodetects_revision_no_args() -> None:
@@ -311,3 +311,100 @@ def test_validate_all_still_rejects_genuine_r2_violation() -> None:
     }
     with pytest.raises(ValueError, match="exactly 2"):
         validate_all(bad)
+
+
+# --- "geo-proj" alias -------------------------------------------------------
+
+
+def test_geo_proj_alias_accepted_on_input() -> None:
+    aliased = create_many({"geo-proj": {"proj:code": "EPSG:4326"}})
+    canonical = create_many({"proj": {"proj:code": "EPSG:4326"}})
+    assert aliased == canonical
+    # requested names are echoed back as given ...
+    _, extracted = extract_many(aliased, ["geo-proj"])
+    assert extracted == {"geo-proj": {"proj:code": "EPSG:4326"}}
+    # ... but reporting functions always use the canonical spelling.
+    _, detected = extract_all(aliased)
+    assert set(detected) == {"proj"}
+    assert set(zarr_cm.detect_revisions(aliased)) == {"proj"}
+
+
+def test_geo_proj_alias_in_revisions_override() -> None:
+    aliased = create_many(
+        {"proj": {"proj:code": "EPSG:4326"}}, revisions={"geo-proj": "r2"}
+    )
+    canonical = create_many(
+        {"geo-proj": {"proj:code": "EPSG:4326"}}, revisions={"proj": "r2"}
+    )
+    assert aliased == canonical
+    assert zarr_cm.detect_revisions(aliased) == {"proj": "r2"}
+
+
+def test_convention_aliases_constant() -> None:
+    assert zarr_cm.CONVENTION_ALIASES == {"geo-proj": "proj"}
+    assert not (set(zarr_cm.CONVENTION_ALIASES) & CONVENTION_NAMES)
+
+
+# --- latest_revisions / convention_metadata ---------------------------------
+
+
+def test_latest_revisions() -> None:
+    assert zarr_cm.latest_revisions() == {
+        "proj": proj.LATEST,
+        "spatial": spatial.LATEST,
+        "multiscales": zarr_cm.multiscales.LATEST,
+    }
+
+
+@pytest.mark.parametrize(
+    ("name", "revision", "expected"),
+    [
+        ("proj", None, proj.CMO),
+        ("geo-proj", None, proj.CMO),
+        ("proj", "r2", proj.r2.CMO),
+        ("proj", "r3", proj.r3.CMO),
+        ("spatial", None, spatial.CMO),
+        ("multiscales", None, zarr_cm.multiscales.CMO),
+        ("license", None, zarr_cm.license.CMO),
+        ("uom", None, zarr_cm.uom.CMO),
+    ],
+)
+def test_convention_metadata(
+    name: ConventionName, revision: str | None, expected: dict[str, Any]
+) -> None:
+    cmo = zarr_cm.convention_metadata(name, revision=revision)
+    assert cmo == expected
+    # a copy, not the module-level constant
+    assert cmo is not expected
+    cmo["uuid"] = "mutated"
+    assert expected["uuid"] != "mutated"
+
+
+def test_convention_metadata_matches_what_insert_writes() -> None:
+    attrs = create_many({"spatial": {"spatial:dimensions": ["y", "x"]}})
+    assert attrs["zarr_conventions"] == [zarr_cm.convention_metadata("spatial")]
+
+
+def test_convention_metadata_unknown_name() -> None:
+    with pytest.raises(ValueError, match="Unknown convention"):
+        zarr_cm.convention_metadata("nope")  # type: ignore[arg-type]
+
+
+def test_convention_metadata_unknown_revision() -> None:
+    with pytest.raises(ValueError, match="Unknown revision 'r99'"):
+        zarr_cm.convention_metadata("proj", revision="r99")
+
+
+def test_convention_metadata_revision_on_unrevisioned() -> None:
+    with pytest.raises(ValueError, match="has no revisions"):
+        zarr_cm.convention_metadata("license", revision="r2")
+
+
+def test_unknown_key_in_revisions_is_ignored() -> None:
+    # Only the conventions actually being processed are validated; stray keys
+    # in the revisions override (typos, future conventions) do not raise.
+    result = create_many(
+        {"proj": {"proj:code": "EPSG:4326"}},
+        revisions={"not-a-convention": "r1"},  # type: ignore[dict-item]
+    )
+    assert zarr_cm.detect_revisions(result) == {"proj": proj.LATEST}
