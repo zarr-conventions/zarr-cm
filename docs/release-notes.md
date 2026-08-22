@@ -59,6 +59,9 @@ The blog carries a narrative of this release; this is the itemized list.
   and the JSON aliases `JSONValue`, `JSONDict`.
 - Every example under `examples/` is now a page on the docs site, and this
   release-notes page and a developer blog were added to the docs.
+- Every spec-defined TypedDict's docstring links to the section of the spec that
+  defines its shape, pinned to the same commit or tag the module's `SPEC_URL`
+  uses; a test keeps the next convention from arriving without one.
 - A `justfile` collects the development tasks (`just check`, `just test`,
   `just lint`, `just typecheck`, `just docs`, …).
 
@@ -98,6 +101,14 @@ The blog carries a narrative of this release; this is the itemized list.
   alone (legal per the spec, which requires any one of `uuid`, `schema_url`,
   `spec_url`) was invisible to `detect`, `validate`, `extract` and the `*_all`
   functions.
+- A `zarr_conventions` entry with _no_ identifier at all (neither `uuid`,
+  `schema_url` nor `spec_url` — which the spec forbids) was accepted by every
+  read and write path; `validate_convention_metadata_object` existed but was
+  never called. Every path that parses `zarr_conventions` now enforces it.
+- Reading a `zarr_conventions` entry silently dropped any field beyond the five
+  the spec defines, so `insert` on attributes carrying a foreign declaration
+  with a future field lost that field. Unknown fields now pass through
+  untouched; only the known fields are validated.
 - The convention TypedDicts' annotations resolve at runtime again, so
   `typing.get_type_hints()` and pydantic's `model_rebuild()` work on them
   without `NameError`.
@@ -124,6 +135,14 @@ The blog carries a narrative of this release; this is the itemized list.
 - `*ConventionAttrs.zarr_conventions` is typed
   `Sequence[ConventionMetadataObject]` rather than
   `tuple[ConventionMetadataObject, ...]` (type-level only).
+- `ConventionMetadataObject` is a closed TypedDict (`closed=True`), per the
+  spec's "MUST NOT contain additional fields". Typed construction of a
+  declaration with extra fields — including through a pydantic model — is now
+  rejected. Reading is unaffected: documents carrying unknown declaration fields
+  still parse, and the fields are preserved.
+- A `zarr_conventions` entry lacking every identifier (`uuid`, `schema_url`,
+  `spec_url`) now raises `ValueError` wherever `zarr_conventions` is parsed,
+  including `validate_all`, `detect_revisions`, `insert` and `extract`.
 
 ### Internal
 

@@ -13,6 +13,9 @@ theme:
     - search.suggest
     - search.highlight
     - navigation.expand
+    # A section's index page is the section entry itself, so "Examples" and
+    # "Blog" are not listed twice (once as section, once as "Examples"/"Blog").
+    - navigation.indexes
     - navigation.tracking
     - toc.follow
   palette:
@@ -30,6 +33,8 @@ theme:
         name: Switch to dark mode
 
 markdown_extensions:
+  # Blog posts use `[^n]` footnotes.
+  - footnotes
   - pymdownx.highlight
   - pymdownx.superfences
   # Lets docs pages include files by path (--8<--); the docs/examples pages use
