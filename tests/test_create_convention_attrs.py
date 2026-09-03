@@ -13,7 +13,7 @@ from typing import Any
 import pytest
 
 from zarr_cm import license as license_
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 from zarr_cm._core import validate_json_object
 
 # (module, kwargs) pairs covering every convention.
@@ -24,6 +24,7 @@ CASES: list[tuple[Any, dict[str, Any]]] = [
     (multiscales, {"layout": ({"asset": "0"},)}),
     (license_, {"spdx": "MIT"}),
     (uom, {"ucum": {"unit": "m"}}),
+    (stac, {"key": "stac.json"}),
 ]
 
 

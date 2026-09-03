@@ -12,7 +12,7 @@ import pytest
 
 import zarr_cm
 import zarr_cm._core as core
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 from zarr_cm._core import JSONValue, validate_json_object
 
 if TYPE_CHECKING:
@@ -33,7 +33,7 @@ def test_public_validator_annotations_resolve_at_runtime() -> None:
     assert not isinstance(zarr_cm.GroupMetadataInput, str)
     assert not isinstance(zarr_cm.NodeMetadataInput, str)
 
-    for module in (spatial, proj, multiscales, zarr_cm.license_, uom):
+    for module in (spatial, proj, multiscales, zarr_cm.license_, uom, stac):
         for name in (
             "validate_group_metadata",
             "validate_array_metadata",

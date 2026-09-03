@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from zarr_cm import license as license_
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 from zarr_cm._contract import ConventionModule
 
 
@@ -20,6 +20,7 @@ def _dispatch_targets() -> list[tuple[str, object]]:
         ("multiscales", multiscales),
         ("license", license_),
         ("uom", uom),
+        ("stac", stac),
     ):
         revisions = getattr(mod, "_REVISIONS", None)
         if revisions is None:
@@ -38,9 +39,9 @@ def _dispatch_targets() -> list[tuple[str, object]]:
 
 def test_all_dispatch_targets_satisfy_contract() -> None:
     targets = _dispatch_targets()
-    # Sanity: we actually found the known set (7 today: spatial r2/r3,
-    # proj r2/r3, multiscales, license, uom).
-    assert len(targets) >= 7
+    # Sanity: we actually found the known set (8 today: spatial r2/r3,
+    # proj r2/r3, multiscales, license, uom, stac).
+    assert len(targets) >= 8
     for name, mod in targets:
         assert isinstance(mod, ConventionModule), (
             f"dispatch target {name!r} does not satisfy ConventionModule"

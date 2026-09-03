@@ -12,7 +12,7 @@ from typing import Any
 import pytest
 
 from zarr_cm import license as license_
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 from zarr_cm._core import validate_json_object
 
 # The v3 array fields below zarr-cm never inspects; a realistic stub keeps the
@@ -49,6 +49,10 @@ def _multiscales_attrs() -> Any:
     return multiscales.create_convention_attrs(layout=({"asset": "0"},))
 
 
+def _stac_attrs() -> Any:
+    return stac.create_convention_attrs(key="stac.json")
+
+
 def test_valid_documents_pass() -> None:
     """Reasonable node/convention combinations validate, at every layer."""
     cases: list[tuple[Any, Any]] = [
@@ -62,8 +66,9 @@ def test_valid_documents_pass() -> None:
         (license_, array_node(license_.create_convention_attrs(spdx="MIT"))),
         (license_, group_node(license_.create_convention_attrs(spdx="MIT"))),
         (uom, array_node(uom.create_convention_attrs(ucum={"unit": "m"}))),
-        # multiscales is group-only
+        # multiscales and stac are group-only
         (multiscales, group_node(_multiscales_attrs())),
+        (stac, group_node(_stac_attrs())),
     ]
     for module, node in cases:
         expected = {**node, "attributes": validate_json_object(node["attributes"])}
@@ -92,6 +97,12 @@ def test_multiscales_rejects_array_nodes() -> None:
     node = array_node(_multiscales_attrs())
     with pytest.raises(ValueError, match="does not apply to array nodes"):
         multiscales.validate_array_metadata(node)
+
+
+def test_stac_rejects_array_nodes() -> None:
+    node = array_node(_stac_attrs())
+    with pytest.raises(ValueError, match="does not apply to array nodes"):
+        stac.validate_array_metadata(node)
 
 
 def test_node_type_mismatch_rejected() -> None:
@@ -193,6 +204,13 @@ def test_multiscales_narrowing_rejects_invalid_asset() -> None:
     attrs["multiscales"]["layout"][0]["asset"] = "/absolute"  # type: ignore[index]
     with pytest.raises(ValueError, match="asset must be a valid relative path"):
         multiscales.validate_group_metadata(group_node(attrs))
+
+
+def test_stac_narrowing_rejects_wrong_field_type() -> None:
+    attrs: Any = _stac_attrs()
+    attrs["stac:key"] = 1
+    with pytest.raises(TypeError, match="'stac:key' must be a string"):
+        stac.validate_group_metadata(group_node(attrs))
 
 
 def test_revisioned_validation_prepares_node_once(
