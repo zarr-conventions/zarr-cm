@@ -17,8 +17,8 @@ The blog carries a narrative of this release; this is the itemized list.
 ### Highlights
 
 - A new convention: `zarr_cm.stac` supports the
-  [STAC convention](https://github.com/zarr-conventions/stac), attaching a
-  STAC Item or Collection to a Zarr group.
+  [STAC convention](https://github.com/zarr-conventions/stac), attaching a STAC
+  Item or Collection to a Zarr group.
 - Whole-document validation: `validate_group_metadata`,
   `validate_array_metadata` and `validate_node_metadata` take a complete
   `zarr.json` document and check the rules that depend on the node type — the
