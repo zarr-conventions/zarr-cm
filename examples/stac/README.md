@@ -6,7 +6,8 @@ Catalog) Item or Collection metadata to a Zarr group.
 
 The example shows how to:
 
-- Embed a complete STAC Item directly with `stac.create_convention_attrs(item=...)`
+- Embed a complete STAC Item directly with
+  `stac.create_convention_attrs(item=...)`
 - Point at a canonical STAC object hosted elsewhere with `stac:link`
 - Detect the revision of a stored document with `stac.detect`
 - Handle a document declaring an unrecognized `schema_url` defensively
