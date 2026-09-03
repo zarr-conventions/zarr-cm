@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
     from collections.abc import Iterable, Mapping
 
 from . import license as license_
-from . import multiscales, proj, spatial, uom
+from . import multiscales, proj, spatial, stac, uom
 from ._core import (
     ArrayMetadata,
     ArrayMetadataInput,
@@ -61,9 +61,12 @@ from .spatial import (
     SpatialConventionAttrsR2,
     SpatialConventionAttrsR3,
 )
+from .stac import StacAttrs, StacConventionAttrs, StacLink
 from .uom import UCUM, UomAttrs, UomConventionAttrs
 
-ConventionName = Literal["proj", "spatial", "multiscales", "license", "uom", "geo-proj"]
+ConventionName = Literal[
+    "proj", "spatial", "multiscales", "license", "uom", "stac", "geo-proj"
+]
 """Display names accepted by the multi-convention functions.
 
 `"geo-proj"` is the pre-rename spelling of `"proj"`; it is still accepted
@@ -71,7 +74,9 @@ everywhere a name is taken as input, but functions that *report* names
 (`extract_all`, `detect_revisions` ...) always use the canonical `"proj"`.
 """
 
-CanonicalConventionName = Literal["proj", "spatial", "multiscales", "license", "uom"]
+CanonicalConventionName = Literal[
+    "proj", "spatial", "multiscales", "license", "uom", "stac"
+]
 """The canonical subset of `ConventionName` (no aliases)."""
 
 
@@ -151,6 +156,16 @@ _REGISTRY: Final[dict[CanonicalConventionName, _ConventionModule]] = {
         uom.extract,
         uom.detect,
     ),
+    "stac": _ConventionModule(
+        stac.UUID,
+        stac.CMO,
+        stac.CONVENTION_KEYS,
+        stac.REVISION_BY_SCHEMA_URL,
+        stac.validate,
+        stac.insert,
+        stac.extract,
+        stac.detect,
+    ),
 }
 
 CONVENTION_ALIASES: Final[dict[str, CanonicalConventionName]] = {"geo-proj": "proj"}
@@ -165,6 +180,7 @@ ALL_CONVENTION_KEYS: Final = frozenset(
     | multiscales.CONVENTION_KEYS
     | license_.CONVENTION_KEYS
     | uom.CONVENTION_KEYS
+    | stac.CONVENTION_KEYS
 )
 
 MultiConventionAttrs = TypedDict(
@@ -188,6 +204,11 @@ MultiConventionAttrs = TypedDict(
         "license": NotRequired[LicenseAttrs],
         # uom
         "uom": NotRequired[UomAttrs],
+        # stac
+        "stac:item": NotRequired[JSONDict],
+        "stac:collection": NotRequired[JSONDict],
+        "stac:key": NotRequired[str],
+        "stac:link": NotRequired[StacLink],
     },
     extra_items=JSONValue,
 )
@@ -554,6 +575,9 @@ __all__ = [
     "SpatialConventionAttrs",
     "SpatialConventionAttrsR2",
     "SpatialConventionAttrsR3",
+    "StacAttrs",
+    "StacConventionAttrs",
+    "StacLink",
     "Transform",
     "TransformR2",
     "UomAttrs",

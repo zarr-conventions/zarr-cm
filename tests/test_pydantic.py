@@ -104,6 +104,9 @@ _TYPED_DICTS = [
     (zarr_cm, "UCUM"),
     (zarr_cm, "UomAttrs"),
     (zarr_cm, "UomConventionAttrs"),
+    (zarr_cm, "StacAttrs"),
+    (zarr_cm, "StacConventionAttrs"),
+    (zarr_cm, "StacLink"),
 ]
 
 

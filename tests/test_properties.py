@@ -38,12 +38,34 @@ settings.register_profile("zarr_cm", max_examples=60, deadline=None)
 settings.load_profile("zarr_cm")
 
 
-# The proj schemas `$ref` PROJ's own PROJJSON schema by URL. zarr-cm does not
-# validate PROJJSON structure (any JSON object passes), so resolve that
-# reference to an accept-anything stub rather than fetch it.
-_EXTERNAL: Registry[Any] = Registry().with_resource(  # type: ignore[assignment]
-    "https://proj.org/schemas/v0.7/projjson.schema.json",
-    Resource.from_contents({}, default_specification=DRAFT7),
+# The proj schemas `$ref` PROJ's own PROJJSON schema by URL, and the stac
+# schema `$ref`s STAC's own item/collection schemas as a `oneOf` between their
+# v1.0.0 and v1.1.0 versions. zarr-cm does not validate PROJJSON or STAC
+# Item/Collection structure itself (any JSON object passes), so resolve those
+# references to stubs rather than fetch them -- but `oneOf` requires exactly
+# one match, so the stac pair can't both be accept-anything (`{}`) or every
+# instance would match both and `oneOf` would always fail. Stub each pair's
+# v1.0.0 member as accept-anything and its v1.1.0 member as reject-everything:
+# which one "wins" is arbitrary, only that exactly one does.
+_STUBS: list[tuple[str, dict[str, Any]]] = [
+    ("https://proj.org/schemas/v0.7/projjson.schema.json", {}),
+    ("https://schemas.stacspec.org/v1.0.0/item-spec/json-schema/item.json", {}),
+    (
+        "https://schemas.stacspec.org/v1.1.0/item-spec/json-schema/item.json",
+        {"not": {}},
+    ),
+    (
+        "https://schemas.stacspec.org/v1.0.0/collection-spec/json-schema/collection.json",
+        {},
+    ),
+    (
+        "https://schemas.stacspec.org/v1.1.0/collection-spec/json-schema/collection.json",
+        {"not": {}},
+    ),
+]
+_EXTERNAL: Registry[Any] = Registry().with_resources(  # type: ignore[assignment]
+    (url, Resource.from_contents(schema, default_specification=DRAFT7))
+    for url, schema in _STUBS
 )
 
 
@@ -315,4 +337,10 @@ def test_upstream_schema_id_is_a_recognized_url(rev: Revision) -> None:
     if schema_id is None:
         pytest.skip("upstream schema declares no $id")
     assert schema_id in rev.module.RECOGNIZED_SCHEMA_URLS
-    assert rev.package.REVISION_BY_SCHEMA_URL.get(schema_id, rev.label) == rev.label
+    if rev.label is None:
+        # Unrevisioned conventions (license, uom, stac) expose no `revision=`
+        # kwarg, so there is no public label to compare against -- just
+        # confirm the schema's own $id is one this module recognizes as itself.
+        assert schema_id in rev.package.REVISION_BY_SCHEMA_URL
+    else:
+        assert rev.package.REVISION_BY_SCHEMA_URL.get(schema_id) == rev.label

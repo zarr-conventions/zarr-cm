@@ -71,6 +71,7 @@ class ConventionModule(Protocol):
 
 if TYPE_CHECKING:
     from . import license as _license
+    from . import stac as _stac
     from . import uom as _uom
     from .multiscales import _r2 as _multiscales_r2
     from .proj import _r2 as _proj_r2
@@ -88,3 +89,4 @@ if TYPE_CHECKING:
     _check_multiscales_r2: ConventionModule = _multiscales_r2
     _check_license: ConventionModule = _license
     _check_uom: ConventionModule = _uom
+    _check_stac: ConventionModule = _stac

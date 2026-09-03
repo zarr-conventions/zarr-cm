@@ -22,7 +22,7 @@ from hypothesis import strategies as st
 
 import zarr_cm
 from zarr_cm import license as license_
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -141,6 +141,28 @@ UOM_KWARGS: st.SearchStrategy[Kwargs] = st.fixed_dictionaries(
     }
 ).map(drop_none)
 
+# --- stac ----------------------------------------------------------------
+
+# stac:item / stac:collection may be any JSON object: test_properties.py stubs
+# their upstream $ref targets (schemas.stacspec.org) to accept anything.
+_STAC_OBJECT = st.dictionaries(text, json_values, max_size=3)
+_STAC_LINK = st.fixed_dictionaries({"href": text}, optional={"rel": text, "type": text})
+
+STAC_KWARGS: st.SearchStrategy[Kwargs] = st.sampled_from(
+    ["item", "collection", "key", "link"]
+).flatmap(
+    lambda field: st.fixed_dictionaries(
+        {
+            field: {
+                "item": _STAC_OBJECT,
+                "collection": _STAC_OBJECT,
+                "key": text,
+                "link": _STAC_LINK,
+            }[field]
+        }
+    )
+)
+
 
 # --- the registry ------------------------------------------------------------
 
@@ -217,6 +239,7 @@ REVISIONS: tuple[Revision, ...] = (
         LICENSE_KWARGS,
     ),
     Revision("uom", None, uom, uom, _schema("uom.json"), "array", UOM_KWARGS),
+    Revision("stac", None, stac, stac, _schema("stac.json"), "group", STAC_KWARGS),
 )
 
 REVISIONED: tuple[Revision, ...] = tuple(r for r in REVISIONS if r.label is not None)

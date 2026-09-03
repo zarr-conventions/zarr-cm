@@ -49,3 +49,7 @@
 ## uom
 
 ::: zarr_cm.uom
+
+## stac
+
+::: zarr_cm.stac

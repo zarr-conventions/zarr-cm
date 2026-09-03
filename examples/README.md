@@ -31,6 +31,8 @@ examples/
   (single revision)
 - [license](license/README.md) -- license specifiers (single revision)
 - [uom](uom/README.md) -- units of measurement as UCUM codes (single revision)
+- [stac](stac/README.md) -- STAC Item/Collection metadata on a group (single
+  revision, group-only)
 
 ## Adding New Examples
 

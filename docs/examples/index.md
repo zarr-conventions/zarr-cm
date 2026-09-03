@@ -22,3 +22,5 @@ with a README and its source, embedded in the pages below.
   revision)
 - [license](license.md) — license specifiers (single revision)
 - [uom](uom.md) — units of measurement as UCUM codes (single revision)
+- [stac](stac.md) — STAC Item/Collection metadata on a group (single revision,
+  group-only)

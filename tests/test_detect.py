@@ -4,7 +4,7 @@ import pytest
 
 import zarr_cm
 from zarr_cm import license as license_
-from zarr_cm import multiscales, proj, spatial, uom
+from zarr_cm import multiscales, proj, spatial, stac, uom
 
 
 def test_spatial_detect_known_revisions() -> None:
@@ -107,3 +107,22 @@ def test_flat_detect_unknown_url_returns_none() -> None:
 def test_flat_detect_absent_raises() -> None:
     with pytest.raises(ValueError, match="license"):
         license_.detect({"foo": "bar"})
+
+
+def test_stac_detect_present_returns_v0_1() -> None:
+    doc = stac.insert({}, stac.create(key="stac.json"))
+    assert stac.detect(doc) == "v0.1"
+
+
+def test_stac_detect_unknown_url_returns_none() -> None:
+    other = "https://example/other.json"
+    doc = {
+        "stac:key": "stac.json",
+        "zarr_conventions": [{"uuid": stac.UUID, "schema_url": other}],
+    }
+    assert stac.detect(doc) is None
+
+
+def test_stac_detect_absent_raises() -> None:
+    with pytest.raises(ValueError, match="stac"):
+        stac.detect({"foo": "bar"})
