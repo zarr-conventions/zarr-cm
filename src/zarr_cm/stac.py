@@ -193,6 +193,10 @@ def validate(data: Mapping[str, JSONValue]) -> StacAttrs:
     must be present. `stac:item`/`stac:collection` are only checked for being
     JSON objects -- validating them as STAC Items/Collections is STAC's own
     job (see the spec's "Validation" section), not this convention's.
+
+    The spec requires `stac:link.href` to be an absolute URL; this only checks
+    that it is a string, not that it is absolute (the same shallow treatment
+    `license`'s `url` field gets).
     """
     present = [k for k in CONVENTION_KEYS if k in data]
     if len(present) != 1:

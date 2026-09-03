@@ -41,27 +41,22 @@ _EXTERNAL: Registry[Any] = Registry().with_resources(  # type: ignore[assignment
 )
 
 
-def test_create_item() -> None:
-    item: JSONDict = {"type": "Feature", "id": "example"}
-    result = stac.create(item=item)
-    assert result == {"stac:item": item}
+_ITEM: JSONDict = {"type": "Feature", "id": "example"}
+_COLLECTION: JSONDict = {"type": "Collection", "id": "example"}
+_LINK: StacLink = {"href": "https://example.com/item.json"}
 
 
-def test_create_collection() -> None:
-    collection: JSONDict = {"type": "Collection", "id": "example"}
-    result = stac.create(collection=collection)
-    assert result == {"stac:collection": collection}
-
-
-def test_create_key() -> None:
-    result = stac.create(key="stac.json")
-    assert result == {"stac:key": "stac.json"}
-
-
-def test_create_link() -> None:
-    link: StacLink = {"href": "https://example.com/item.json"}
-    result = stac.create(link=link)
-    assert result == {"stac:link": link}
+@pytest.mark.parametrize(
+    ("kwargs", "expected"),
+    [
+        ({"item": _ITEM}, {"stac:item": _ITEM}),
+        ({"collection": _COLLECTION}, {"stac:collection": _COLLECTION}),
+        ({"key": "stac.json"}, {"stac:key": "stac.json"}),
+        ({"link": _LINK}, {"stac:link": _LINK}),
+    ],
+)
+def test_create_each_field(kwargs: dict[str, Any], expected: dict[str, Any]) -> None:
+    assert stac.create(**kwargs) == expected
 
 
 def test_create_rejects_zero_fields() -> None:
