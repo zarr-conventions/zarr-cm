@@ -59,9 +59,8 @@ The blog carries a narrative of this release; this is the itemized list.
   `RECOGNIZED_SCHEMA_URLS` (`SCHEMA_URL` plus aliases). Per convention package:
   `REVISION_BY_SCHEMA_URL`, the `{url: revision}` map every read consults.
   Recognized aliases today: the never-published `refs/tags/v1` URLs that early
-  writers copied from the draft READMEs (→ `r2`), and the `refs/tags/v0.1`
-  release-tag URLs that upstream's READMEs and schema `$id`s now declare (→
-  `r3`).
+  writers copied from the draft READMEs (→ `r2`), and the commit-pinned URLs
+  that `zarr-cm` 0.4 wrote for `proj` and `spatial` (→ `r3`).
 - Document types re-exported at the top level: `ArrayMetadata`, `GroupMetadata`,
   `Metadata`, `ArrayMetadataInput`, `GroupMetadataInput`, `NodeMetadataInput`,
   and the JSON aliases `JSONValue`, `JSONDict`.
@@ -93,6 +92,11 @@ The blog carries a narrative of this release; this is the itemized list.
 
 ### Fixed
 
+- `proj` and `spatial` declarations now validate against the published v0.1
+  schemas: `r3` writes the `refs/tags/v0.1` `schema_url`/`spec_url` the schemas
+  require as `const`s, instead of commit-pinned URLs, and every revision writes
+  `name` as `"proj"`/`"spatial"` (upstream dropped the trailing colon in May
+  2026). Documents written by 0.4 still read as `r3`.
 - Documents declaring the upstream `refs/tags/v0.1` schema URL for `proj` or
   `spatial` — the URL upstream's own READMEs and schema `$id`s tell writers to
   use — were rejected as "unsupported schema_url". They now read as `r3`.
@@ -122,6 +126,11 @@ The blog carries a narrative of this release; this is the itemized list.
   their results by `"proj"`. Code that keyed on `"geo-proj"` in those results
   must switch. (`"geo-proj"` remains valid as input, and the `zarr_cm.geo_proj`
   module alias remains.)
+- `proj.SCHEMA_URL`/`SPEC_URL`/`CMO` and their `spatial` counterparts changed
+  value (tag URLs instead of commit URLs, and `name` without the trailing
+  colon), so newly written `zarr_conventions` entries differ from 0.4's. Code
+  that compared declarations against hard-coded 0.4 values must update; reads
+  are unaffected.
 - A declared `schema_url` that no revision recognizes now raises `ValueError`
   from `validate`/`extract` (and the node-level validators) instead of silently
   falling back to the latest revision. `detect` continues to return `None` for

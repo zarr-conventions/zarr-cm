@@ -119,13 +119,13 @@ documents zarr-cm writes always carry the canonical `SCHEMA_URL`.
 
 The aliases are not hypothetical. Two kinds exist today:
 
-- **Release tag URLs.** The `proj` and `spatial` `r3` revisions write a
-  commit-pinned `SCHEMA_URL`, but the upstream `v0.1` tag points at that same
-  commit, and the tag URL
+- **Commit-pinned URLs.** The `proj` and `spatial` `r3` revisions write the
+  upstream `v0.1` tag URL
   (`https://raw.githubusercontent.com/zarr-conventions/proj/refs/tags/v0.1/schema.json`
-  and its `spatial` counterpart) is the schema's own `$id` and the `schema_url`
-  every upstream README example declares. Those URLs are aliases of `r3`, so a
-  document written by following upstream's own instructions reads as `r3`.
+  and its `spatial` counterpart), which the v0.1 schemas require as a `const`.
+  Earlier `zarr-cm` releases wrote a URL pinned to the commit that tag points at
+  instead. Those commit URLs are aliases of `r3`, so documents written by those
+  releases still read as `r3`.
 - **Draft-era URLs.** Between the conventions' first drafts (December 2025) and
   their `v0.1` releases (June 2026), the spec READMEs published example
   declarations whose `schema_url` pointed at a `refs/tags/v1` tag that was never

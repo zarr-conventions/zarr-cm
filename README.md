@@ -123,11 +123,13 @@ expose package-local revision labels ordered oldest → newest. Today `spatial`
 and `proj` ship `r2` and `r3`, while `multiscales` ships only `r2`; more are
 added as upstream conventions evolve.
 
-Each revision pins its emitted `schema_url`/`spec_url` to the **upstream commit
-SHA** it was snapshotted from, so a written document is self-describing: the
-`uuid` says _which_ convention, and the pinned `schema_url` says _which_
-revision. Writes default to the latest revision; reads auto-detect the revision
-from the document's `schema_url` (overridable with a `revision=` argument).
+Each revision pins its emitted `schema_url`/`spec_url` to an immutable upstream
+reference — the release tag where one exists (`v0.1` for the latest revisions),
+otherwise the commit SHA it was snapshotted from — so a written document is
+self-describing: the `uuid` says _which_ convention, and the pinned `schema_url`
+says _which_ revision. Writes default to the latest revision; reads auto-detect
+the revision from the document's `schema_url` (overridable with a `revision=`
+argument).
 
 ### Why there is no `r1`
 

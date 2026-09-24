@@ -59,8 +59,8 @@ GeoProjConventionAttrs = TypedDict(
 
 See https://github.com/zarr-conventions/proj/blob/d150edbde61b53e9d17520f6d107c9d3689e5910/README.md#convention-registration"""
 
-# UUID identifies the convention *family*, not the revision; it is shared with
-# r1. Revisions are distinguished by the commit-pinned SCHEMA_URL below, which
+# UUID identifies the convention *family*, not the revision; it is shared by
+# every revision. Revisions are distinguished by the commit-pinned SCHEMA_URL below, which
 # is what revision detection on read matches against.
 UUID: Final = "f17cb550-5864-4468-aeb7-f3180cfb622f"
 _COMMIT: Final = "d150edbde61b53e9d17520f6d107c9d3689e5910"
@@ -73,7 +73,7 @@ CMO: Final[ConventionMetadataObject] = {
     "uuid": UUID,
     "schema_url": SCHEMA_URL,
     "spec_url": SPEC_URL,
-    "name": "proj:",
+    "name": "proj",
     "description": "Coordinate reference system information for geospatial data",
 }
 

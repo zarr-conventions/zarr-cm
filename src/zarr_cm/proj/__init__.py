@@ -350,7 +350,7 @@ def validate_group_metadata(
         uuid=UUID,
         revision_by_schema_url=REVISION_BY_SCHEMA_URL,
         latest=LATEST,
-        convention_name="proj:",
+        convention_name="proj",
         requested=revision,
     )
     _revision(selected).validate_context(context)
@@ -395,7 +395,7 @@ def validate_array_metadata(
         uuid=UUID,
         revision_by_schema_url=REVISION_BY_SCHEMA_URL,
         latest=LATEST,
-        convention_name="proj:",
+        convention_name="proj",
         requested=revision,
     )
     _revision(selected).validate_context(context)

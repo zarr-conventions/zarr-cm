@@ -17,6 +17,7 @@ import json
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+import jsonschema
 import pytest
 
 import zarr_cm
@@ -204,11 +205,11 @@ def upstream_readme_attrs() -> dict[str, Any]:
     """Attributes exactly as the upstream proj/spatial READMEs show them."""
     return {
         "zarr_conventions": [
-            {"uuid": proj.UUID, "schema_url": PROJ_V01_TAG_URL, "name": "proj:"},
+            {"uuid": proj.UUID, "schema_url": PROJ_V01_TAG_URL, "name": "proj"},
             {
                 "uuid": spatial.UUID,
                 "schema_url": SPATIAL_V01_TAG_URL,
-                "name": "spatial:",
+                "name": "spatial",
             },
         ],
         "proj:code": "EPSG:4326",
@@ -225,6 +226,52 @@ def test_v01_tag_urls_match_the_published_schema_ids() -> None:
     ):
         schema = json.loads((SCHEMAS / path).read_text())
         assert schema["$id"] == url
+
+
+@pytest.mark.parametrize(
+    ("module", "schema_file"),
+    [
+        (proj.r3, "proj-r3.json"),
+        (spatial.r3, "spatial-r3.json"),
+        (multiscales.r2, "multiscales-r2.json"),
+    ],
+)
+def test_latest_cmo_satisfies_the_published_convention_metadata(
+    module: Any, schema_file: str
+) -> None:
+    """The CMO a latest revision writes meets its schema's `conventionMetadata`.
+
+    Checked against the subschema directly: in the proj and spatial schemas,
+    `zarr_conventions` sits next to a sibling `$ref`, which draft-07 ignores,
+    so validating a whole document never reaches these `const`s.
+    """
+    schema = json.loads((SCHEMAS / schema_file).read_text())
+    subschema = {
+        **schema["$defs"]["conventionMetadata"],
+        "$schema": schema["$schema"],
+        "$defs": schema["$defs"],
+    }
+    jsonschema.validate(module.CMO, subschema)
+
+
+def test_zarr_cm_0_4_documents_read_as_r3_and_rewrite_canonically() -> None:
+    """0.4 wrote commit-pinned URLs and colon names; they read as r3, and
+    re-inserting replaces the declaration with the canonical one."""
+    for pkg, key, data in (
+        (proj, "proj:code", proj.create(code="EPSG:4326")),
+        (spatial, "spatial:dimensions", spatial.create(dimensions=["y", "x"])),
+    ):
+        (commit_url,) = pkg.r3.ALIAS_SCHEMA_URLS
+        old_cmo = {
+            "uuid": pkg.UUID,
+            "schema_url": commit_url,
+            "name": f"{pkg.CMO['name']}:",
+        }
+        attrs = {"zarr_conventions": [old_cmo], **data}
+        assert pkg.detect(attrs) == "r3"
+        assert pkg.validate(attrs).get(key) == data[key]
+        rewritten = pkg.insert(attrs, data, overwrite=True)
+        assert rewritten["zarr_conventions"] == [pkg.CMO]
 
 
 def test_v01_tag_urls_detect_as_r3() -> None:

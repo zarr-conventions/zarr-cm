@@ -66,8 +66,8 @@ SpatialConventionAttrs = TypedDict(
 
 See https://github.com/zarr-conventions/spatial/blob/54d81b7ced0376e63ee10f34db31db7d08dcc28d/README.md#convention-registration"""
 
-# UUID identifies the convention *family*, not the revision; it is shared with
-# r1. Revisions are distinguished by the SCHEMA_URL below, which is what
+# UUID identifies the convention *family*, not the revision; it is shared by
+# every revision. Revisions are distinguished by the SCHEMA_URL below, which is what
 # revision detection on read matches against.
 #
 # The upstream v0.1 schema ENFORCES schema_url/spec_url as `const` equal to the

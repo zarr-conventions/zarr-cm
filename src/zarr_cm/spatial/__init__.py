@@ -152,7 +152,7 @@ def _resolve_read_revision(attrs: Mapping[str, JSONValue], revision: str | None)
         uuid=UUID,
         revision_by_schema_url=REVISION_BY_SCHEMA_URL,
         latest=LATEST,
-        convention_name="spatial:",
+        convention_name="spatial",
         requested=revision,
     )
 
@@ -362,7 +362,7 @@ def validate_group_metadata(
         uuid=UUID,
         revision_by_schema_url=REVISION_BY_SCHEMA_URL,
         latest=LATEST,
-        convention_name="spatial:",
+        convention_name="spatial",
         requested=revision,
     )
     _revision(selected).validate_context(context)
@@ -407,7 +407,7 @@ def validate_array_metadata(
         uuid=UUID,
         revision_by_schema_url=REVISION_BY_SCHEMA_URL,
         latest=LATEST,
-        convention_name="spatial:",
+        convention_name="spatial",
         requested=revision,
     )
     _revision(selected).validate_context(context)

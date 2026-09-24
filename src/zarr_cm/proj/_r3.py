@@ -59,8 +59,8 @@ GeoProjConventionAttrs = TypedDict(
 
 See https://github.com/zarr-conventions/proj/blob/5ca5b2f92e5c7245f957d9128b289ee535f0720d/README.md#convention-registration"""
 
-# UUID identifies the convention *family*, not the revision; it is shared with
-# r1. Revisions are distinguished by the SCHEMA_URL below, which is what
+# UUID identifies the convention *family*, not the revision; it is shared by
+# every revision. Revisions are distinguished by the SCHEMA_URL below, which is what
 # revision detection on read matches against.
 #
 # The upstream v0.1 schema ENFORCES schema_url/spec_url as `const` equal to the
