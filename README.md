@@ -94,9 +94,9 @@ print(result)
     'zarr_conventions': [
         {
             'uuid': 'f17cb550-5864-4468-aeb7-f3180cfb622f',
-            'schema_url': 'https://raw.githubusercontent.com/zarr-conventions/proj/5ca5b2f92e5c7245f957d9128b289ee535f0720d/schema.json',
-            'spec_url': 'https://github.com/zarr-conventions/proj/blob/5ca5b2f92e5c7245f957d9128b289ee535f0720d/README.md',
-            'name': 'proj:',
+            'schema_url': 'https://raw.githubusercontent.com/zarr-conventions/proj/refs/tags/v0.1/schema.json',
+            'spec_url': 'https://github.com/zarr-conventions/proj/blob/v0.1/README.md',
+            'name': 'proj',
             'description': 'Coordinate reference system information for geospatial data',
         }
     ],
