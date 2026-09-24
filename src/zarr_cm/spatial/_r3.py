@@ -67,37 +67,38 @@ SpatialConventionAttrs = TypedDict(
 See https://github.com/zarr-conventions/spatial/blob/54d81b7ced0376e63ee10f34db31db7d08dcc28d/README.md#convention-registration"""
 
 # UUID identifies the convention *family*, not the revision; it is shared with
-# r1. Revisions are distinguished by the commit-pinned SCHEMA_URL below, which
-# is what revision detection on read matches against.
+# r1. Revisions are distinguished by the SCHEMA_URL below, which is what
+# revision detection on read matches against.
+#
+# The upstream v0.1 schema ENFORCES schema_url/spec_url as `const` equal to the
+# refs/tags/v0.1 URLs (no escape hatch), so we must emit those exact tag URLs to
+# validate. The snapshot is still taken at commit _COMMIT; _TAG is the
+# published tag at that commit.
 UUID: Final = "689b58e2-cf7b-45e0-9fff-9cfc0883d6b4"
 _COMMIT: Final = "54d81b7ced0376e63ee10f34db31db7d08dcc28d"
-SCHEMA_URL: Final = (
-    f"https://raw.githubusercontent.com/zarr-conventions/spatial/{_COMMIT}/schema.json"
-)
-SPEC_URL: Final = (
-    f"https://github.com/zarr-conventions/spatial/blob/{_COMMIT}/README.md"
-)
+_TAG: Final = "v0.1"
+SCHEMA_URL: Final = f"https://raw.githubusercontent.com/zarr-conventions/spatial/refs/tags/{_TAG}/schema.json"
+SPEC_URL: Final = f"https://github.com/zarr-conventions/spatial/blob/{_TAG}/README.md"
 
 CMO: Final[ConventionMetadataObject] = {
     "uuid": UUID,
     "schema_url": SCHEMA_URL,
     "spec_url": SPEC_URL,
-    "name": "spatial:",
+    "name": "spatial",
     "description": "Spatial coordinate information",
 }
 
 
-_TAG: Final = "v0.1"
 ALIAS_SCHEMA_URLS: Final[frozenset[str]] = frozenset(
     {
-        f"https://raw.githubusercontent.com/zarr-conventions/spatial/refs/tags/{_TAG}/schema.json",
+        f"https://raw.githubusercontent.com/zarr-conventions/spatial/{_COMMIT}/schema.json",
     }
 )
 """Other schema_urls this revision recognizes as its own identity.
 
-`SCHEMA_URL` pins the snapshot commit; the upstream `v0.1` tag points at that
-same commit, and the tag URL is what the upstream README and the schema's own
-`$id` tell writers to declare. Documents carrying it must read as this revision.
+The commit-pinned URL is what earlier `zarr-cm` releases wrote before the
+`v0.1` tag URL was confirmed resolvable; documents carrying it must still read
+as this revision.
 """
 
 RECOGNIZED_SCHEMA_URLS: Final[frozenset[str]] = frozenset(

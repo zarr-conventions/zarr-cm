@@ -115,7 +115,7 @@ def test_r3_rejects_zero_keys() -> None:
 
 
 def test_r3_schema_url_pinned_to_v0_1() -> None:
-    assert "5ca5b2f92e5c7245f957d9128b289ee535f0720d" in proj_r3.SCHEMA_URL
+    assert "refs/tags/v0.1" in proj_r3.SCHEMA_URL
     assert "refs/tags/v1" not in proj_r3.SCHEMA_URL
 
 

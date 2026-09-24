@@ -252,9 +252,8 @@ def test_r2_create_validates_against_vendored_schema() -> None:
 
 
 def test_r3_schema_url_pinned_to_v0_1() -> None:
-    assert "54d81b7ced0376e63ee10f34db31db7d08dcc28d" in spatial_r3.SCHEMA_URL
+    assert "refs/tags/v0.1" in spatial_r3.SCHEMA_URL
     assert "refs/tags/v1" not in spatial_r3.SCHEMA_URL
-    assert "refs/tags/v0.1" not in spatial_r3.SCHEMA_URL  # we pin to the commit SHA
 
 
 def test_r3_same_shape_as_r2() -> None:
