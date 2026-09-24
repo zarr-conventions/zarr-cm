@@ -4,10 +4,21 @@ on:
   schedule:
     - cron: "0 6 * * 1"
   workflow_dispatch:
+    inputs:
+      simulate_drift:
+        description:
+          "Force the check to fail, to exercise the issue-filing path"
+        type: boolean
+        default: false
 
 env:
   # Keep in step with ci.yml.
   JUST_VERSION: "1.58.0"
+
+# The drift step files (or comments on) an issue when the check fails.
+permissions:
+  contents: read
+  issues: write
 
 jobs:
   check-upstream:
@@ -23,4 +34,52 @@ jobs:
       - uses: astral-sh/setup-uv@v7
 
       - name: Check for upstream schema drift
-        run: uvx --from rust-just==${{ env.JUST_VERSION }} just check-upstream
+        id: drift
+        # continue-on-error so a failure reaches the issue step below; the
+        # last step re-fails the run so scheduled failures still show red.
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          if [ "${{ inputs.simulate_drift }}" = "true" ]; then
+            echo "[simulated] drift forced via workflow_dispatch input" | tee drift.log
+            exit 1
+          fi
+          uvx --from rust-just==${{ env.JUST_VERSION }} just check-upstream 2>&1 | tee drift.log
+
+      - name: Open or update the drift issue
+        if: steps.drift.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TITLE: Upstream schema drift detected
+          RUN_URL:
+            ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{
+            github.run_id }}
+        run: |
+          {
+            echo "The scheduled upstream drift check failed."
+            echo
+            echo '```'
+            cat drift.log
+            echo '```'
+            echo
+            echo "Run: $RUN_URL"
+            echo
+            echo "A vendored snapshot under \`.github/upstream-schemas/\` no longer"
+            echo "matches its convention's upstream \`main\` (or the check hit an"
+            echo "error — see the log). The check only detects drift; authoring a"
+            echo "new revision module is a deliberate human step. See"
+            echo "\`.github/scripts/check_upstream.py\` for what is tracked."
+          } > body.md
+          number=$(gh issue list --repo "$GITHUB_REPOSITORY" --state open \
+            --search "\"$TITLE\" in:title" --json number,title \
+            --jq '.[] | select(.title == env.TITLE) | .number' | head -n1)
+          if [ -n "$number" ]; then
+            echo "Commenting on existing issue #$number"
+            gh issue comment "$number" --repo "$GITHUB_REPOSITORY" --body-file body.md
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --title "$TITLE" --body-file body.md
+          fi
+
+      - name: Fail the run on drift
+        if: steps.drift.outcome == 'failure'
+        run: exit 1
